@@ -399,22 +399,31 @@ body {
 
 /* FAQ styling */
 .accordion-button {
-    background-color: var(--light-color);
-    border: none;
+    background-color: white !important;
+    border: 1px solid var(--border-color) !important;
     font-weight: 500;
     padding: 1rem 1.25rem;
     transition: var(--transition);
+    color: #212529 !important;
 }
 
 .accordion-button:not(.collapsed) {
-    background-color: var(--primary-color);
-    color: white;
+    background-color: var(--primary-color) !important;
+    color: white !important;
     box-shadow: none;
+    border-color: var(--primary-color) !important;
 }
 
 .accordion-button:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+    background-color: white !important;
+    color: #212529 !important;
+}
+
+.accordion-button:hover {
+    background-color: var(--light-color) !important;
+    color: #212529 !important;
 }
 
 .accordion-body {
@@ -437,10 +446,15 @@ body {
 }
 
 .accordion-item {
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-color) !important;
     margin-bottom: 0.5rem;
     border-radius: var(--border-radius);
     overflow: hidden;
+    background-color: white !important;
+}
+
+.accordion-collapse {
+    background-color: white !important;
 }
 
 /* Help icon styling */
@@ -527,6 +541,47 @@ p, span, div, li, td, th {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius);
     box-shadow: var(--box-shadow-lg);
+}
+
+/* Bootstrap 5 Accordion CSS Variable Overrides - MUST BE LAST */
+.accordion {
+    --bs-accordion-btn-bg: white;
+    --bs-accordion-btn-color: #212529;
+    --bs-accordion-active-bg: #007bff;
+    --bs-accordion-active-color: white;
+    --bs-accordion-body-bg: white;
+    --bs-accordion-body-color: #212529;
+    --bs-accordion-border-color: #dee2e6;
+}
+
+/* Force accordion button styling */
+.accordion-button {
+    background: white !important;
+    color: #212529 !important;
+    border: 1px solid #dee2e6 !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background: #007bff !important;
+    color: white !important;
+    border-color: #007bff !important;
+}
+
+.accordion-button:focus {
+    background: white !important;
+    color: #212529 !important;
+    border-color: #007bff !important;
+    box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25) !important;
+}
+
+.accordion-button:hover:not(.collapsed) {
+    background: #0056b3 !important;
+    color: white !important;
+}
+
+.accordion-button:hover.collapsed {
+    background: #f8f9fa !important;
+    color: #212529 !important;
 }
 
 .toast-header {
