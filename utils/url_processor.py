@@ -168,7 +168,10 @@ class URLProcessor:
 
     def parse_html_sitemap(self, html_url: str) -> List[str]:
         """Parse HTML page to extract documentation links as fallback."""
+        logger.info(f"🌐 TRACE: parse_html_sitemap() - Entry point")
         logger.info(f"🌐 Starting HTML discovery for: {html_url}")
+        logger.warning(f"🌐 TRACE: CRITICAL DEPTH ISSUE - Only processing single level!")
+        logger.warning(f"🌐 TRACE: This method will NOT follow discovered links recursively!")
         
         try:
             logger.info(f"📄 Fetching HTML content...")
@@ -204,12 +207,17 @@ class URLProcessor:
             unique_urls = list(set(doc_urls))
             logger.info(f"📋 Extracted {len(unique_urls)} unique documentation URLs")
             
+            logger.warning(f"📋 TRACE: DEPTH LIMITATION - These are only FIRST-LEVEL URLs!")
+            logger.warning(f"📋 TRACE: No recursive discovery will be performed on these URLs!")
+            logger.warning(f"📋 TRACE: Missing potentially hundreds of deeper documentation pages!")
+            
             # Log first few URLs for debugging
             for i, url in enumerate(unique_urls[:5]):
                 logger.info(f"  {i+1}. {url}")
             if len(unique_urls) > 5:
                 logger.info(f"  ... and {len(unique_urls) - 5} more URLs")
             
+            logger.info(f"📋 TRACE: parse_html_sitemap() - Returning {len(unique_urls)} URLs (single level only)")
             return unique_urls
             
         except Exception as e:

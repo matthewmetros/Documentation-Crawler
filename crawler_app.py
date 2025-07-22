@@ -145,10 +145,22 @@ class CrawlerWebInterface:
             
     def crawl_with_progress(self, selected_urls: List[str], config_data: Dict):
         """Crawl pages with real-time progress updates."""
+        logger.info("🔧 TRACE: crawl_with_progress() - Entry point")
+        logger.info(f"🔧 TRACE: Received config_data: {config_data}")
+        
         store_markdown = config_data.get('store_markdown', True)
         store_raw_html = config_data.get('store_raw_html', False)
         store_text = config_data.get('store_text', False)
         store_flatten = config_data.get('store_flatten', False)
+        
+        logger.info("🔧 TRACE: Format options extracted from config:")
+        logger.info(f"  - store_markdown: {store_markdown}")
+        logger.info(f"  - store_raw_html: {store_raw_html}")
+        logger.info(f"  - store_text: {store_text}")
+        logger.info(f"  - store_flatten: {store_flatten}")
+        
+        logger.warning("⚠️ TRACE: CRITICAL ISSUE - Format options are extracted but NOT USED!")
+        logger.warning("⚠️ TRACE: Only Markdown content will be generated regardless of user selection")
         
         total_urls = len(selected_urls)
         processed = 0
@@ -279,17 +291,34 @@ def get_results(session_id):
 def download_results(session_id):
     """Download crawled content as a ZIP file."""
     try:
+        logger.info("📦 TRACE: download_results() - Entry point")
+        logger.info(f"📦 TRACE: Session ID: {session_id}")
+        
         with session_lock:
             if session_id not in active_sessions:
+                logger.error(f"📦 TRACE: Session {session_id} not found in active_sessions")
                 return jsonify({'error': 'Session not found'}), 404
                 
             crawler_interface = active_sessions[session_id]['crawler']
+            config_data = active_sessions[session_id].get('config', {})
+            
+            logger.info("📦 TRACE: Original configuration data:")
+            logger.info(f"  - store_markdown: {config_data.get('store_markdown', 'NOT_FOUND')}")
+            logger.info(f"  - store_raw_html: {config_data.get('store_raw_html', 'NOT_FOUND')}")
+            logger.info(f"  - store_text: {config_data.get('store_text', 'NOT_FOUND')}")
+            
             results = crawler_interface.get_results()
+            logger.info(f"📦 TRACE: Results retrieved, {len(results.get('content', {}))} pages found")
             
         # Create ZIP file in memory
         zip_buffer = io.BytesIO()
         
+        logger.info("📦 TRACE: Creating ZIP file")
+        
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            logger.warning("📦 TRACE: CRITICAL ISSUE - Hardcoded to create .md files only!")
+            logger.warning("📦 TRACE: User format preferences are completely ignored here!")
+            
             # Add each page as a separate markdown file
             for url, page_data in results['content'].items():
                 # Create safe filename from URL
@@ -297,8 +326,12 @@ def download_results(session_id):
                 filename = filename.replace('/', '_').replace('?', '_').replace('&', '_')
                 filename = f"{filename}.md"
                 
+                logger.info(f"📦 TRACE: Adding file to ZIP: {filename}")
+                logger.warning(f"📦 TRACE: File extension hardcoded to .md regardless of user selection!")
+                
                 # Add file to ZIP
                 zip_file.writestr(filename, page_data['content'])
+                logger.info(f"📦 TRACE: Content added for {filename} ({len(page_data['content'])} chars)")
                 
             # Add metadata file
             metadata = {

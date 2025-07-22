@@ -378,9 +378,19 @@ class DocCrawler:
 
     def _scrape_single_page(self, url: str) -> Optional[str]:
         """Scrape a single page and return markdown content."""
+        logger.info(f"🔧 TRACE: _scrape_single_page() - Entry point for {url}")
+        logger.warning(f"🔧 TRACE: FORMAT ISSUE - Only returning Markdown content!")
+        logger.warning(f"🔧 TRACE: HTML and Text formats are not supported here!")
+        
         try:
             response = self.make_request(url)
+            logger.info(f"🔧 TRACE: HTTP response received ({len(response.text)} chars)")
+            
             markdown_content = self.converter.convert(response.text)
+            logger.info(f"🔧 TRACE: Converted to Markdown ({len(markdown_content)} chars)")
+            logger.warning(f"🔧 TRACE: Original HTML content DISCARDED - no HTML format support!")
+            logger.warning(f"🔧 TRACE: Plain text extraction NOT PERFORMED - no Text format support!")
+            
             return markdown_content
         except Exception as e:
             logger.error(f"Error scraping {url}: {e}")

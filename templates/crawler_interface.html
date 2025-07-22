@@ -451,10 +451,12 @@
             }
 
             async startCrawling() {
+                console.log('🚀 TRACE: startCrawling() - Entry point');
                 console.log('🚀 Starting crawling process');
                 
                 const formData = this.getFormData();
-                console.log('📝 Configuration:', formData);
+                console.log('📝 TRACE: Configuration received from form:', formData);
+                console.log('📝 TRACE: About to send configuration to backend via /api/start-crawling');
 
                 try {
                     const response = await fetch('/api/start-crawling', {
@@ -509,7 +511,9 @@
             }
 
             getFormData() {
-                return {
+                console.log('📋 TRACE: getFormData() - Starting form data collection');
+                
+                const formData = {
                     url: document.getElementById('url-input').value,
                     language: document.getElementById('language-select').value,
                     max_workers: parseInt(document.getElementById('max-workers').value),
@@ -521,6 +525,22 @@
                     store_text: document.getElementById('store-text').checked,
                     debug: document.getElementById('debug-mode').checked
                 };
+                
+                console.log('📋 TRACE: Form data collected:', formData);
+                console.log('📋 TRACE: Format options analysis:');
+                console.log('  - store_markdown:', formData.store_markdown);
+                console.log('  - store_raw_html:', formData.store_raw_html);
+                console.log('  - store_text:', formData.store_text);
+                
+                const selectedFormats = [];
+                if (formData.store_markdown) selectedFormats.push('Markdown');
+                if (formData.store_raw_html) selectedFormats.push('HTML');
+                if (formData.store_text) selectedFormats.push('Text');
+                
+                console.log('📋 TRACE: Selected output formats:', selectedFormats.join(', ') || 'NONE');
+                console.log('📋 TRACE: getFormData() - Completed');
+                
+                return formData;
             }
 
             handleStatusUpdate(data) {
@@ -591,6 +611,9 @@
             async downloadResults() {
                 if (!this.currentSessionId) return;
 
+                console.log('💾 TRACE: downloadResults() - Entry point');
+                console.log('💾 TRACE: Current session ID:', this.currentSessionId);
+                console.log('💾 TRACE: About to fetch from /api/download/', this.currentSessionId);
                 console.log('💾 Downloading results');
                 
                 try {
