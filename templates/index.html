@@ -35,6 +35,12 @@
                             </a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="#faq" data-toggle="tab">
+                                <i data-feather="help-circle"></i>
+                                FAQ & Help
+                            </a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="#history" data-toggle="tab">
                                 <i data-feather="clock"></i>
                                 History
@@ -56,7 +62,7 @@
                                     NotebookLM Integration
                                 </h6>
                                 <p class="card-text small">
-                                    Scrape documentation and create Google Docs for seamless NotebookLM workflows.
+                                    Extract content from documentation websites and create Google Docs for AI tools like NotebookLM.
                                 </p>
                             </div>
                         </div>
@@ -112,19 +118,24 @@
                                             <div class="row">
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label for="format-select" class="form-label">Output Format</label>
+                                                        <label for="format-select" class="form-label">File Format</label>
                                                         <select class="form-select" id="format-select">
-                                                            <option value="markdown" selected>Markdown</option>
-                                                            <option value="html">HTML</option>
+                                                            <option value="markdown" selected>Markdown (Best for AI tools)</option>
+                                                            <option value="html">HTML (Formatted)</option>
                                                             <option value="text">Plain Text</option>
                                                         </select>
+                                                        <div class="form-text">Markdown works best with NotebookLM and other AI tools</div>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label for="depth-input" class="form-label">Max Depth</label>
+                                                        <label for="depth-input" class="form-label">How Many Levels Deep? 
+                                                            <i data-feather="help-circle" class="help-icon" data-bs-toggle="tooltip" 
+                                                               title="How many clicks away from the starting page should we go? Lower numbers = faster but less content."></i>
+                                                        </label>
                                                         <input type="number" class="form-control" id="depth-input" 
                                                                min="1" max="10" value="3">
+                                                        <div class="form-text">1 = Just the main page, 3 = Good for most sites, 5+ = Very thorough</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -132,9 +143,10 @@
                                             <div class="row">
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label for="delay-input" class="form-label">Delay (seconds)</label>
+                                                        <label for="delay-input" class="form-label">Wait Between Pages (seconds)</label>
                                                         <input type="number" class="form-control" id="delay-input" 
                                                                min="0" max="10" step="0.1" value="1.0">
+                                                        <div class="form-text">Being polite to websites - 1 second is usually good</div>
                                                     </div>
                                                 </div>
                                                 <div class="col-md-6">
@@ -142,9 +154,10 @@
                                                         <div class="form-check mt-4">
                                                             <input class="form-check-input" type="checkbox" id="single-page-check">
                                                             <label class="form-check-label" for="single-page-check">
-                                                                Single Page Only
+                                                                Just This One Page (Don't Follow Links)
                                                             </label>
                                                         </div>
+                                                        <div class="form-text">Check this to only grab content from the URL you entered</div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -192,10 +205,10 @@
                                         
                                         <h6 class="mt-3">Tips:</h6>
                                         <ul class="small">
-                                            <li>Use lower depths for large sites</li>
-                                            <li>Add delays to be respectful</li>
-                                            <li>Single page mode for specific articles</li>
-                                            <li>Markdown format works best with NotebookLM</li>
+                                            <li>Use fewer levels deep for large sites (2-3 instead of 5+)</li>
+                                            <li>Wait between pages to be respectful to websites</li>
+                                            <li>Use "Just This One Page" for specific articles</li>
+                                            <li>Markdown format works best with AI tools like NotebookLM</li>
                                         </ul>
                                     </div>
                                 </div>
@@ -333,6 +346,300 @@
                         </div>
                     </div>
                     
+                    <!-- FAQ Tab -->
+                    <div class="tab-pane fade" id="faq" role="tabpanel">
+                        <div class="row">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">
+                                            <i data-feather="help-circle"></i>
+                                            Frequently Asked Questions
+                                        </h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="accordion" id="faqAccordion">
+                                            
+                                            <!-- What does this tool do? -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="whatDoesItDo">
+                                                    <button class="accordion-button" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseWhatDoesItDo" aria-expanded="true">
+                                                        What does this tool do?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseWhatDoesItDo" class="accordion-collapse collapse show" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p>This tool automatically reads and copies content from documentation websites. Think of it like a smart copy-paste tool that can visit many pages at once and organize everything into a single document.</p>
+                                                        <p><strong>What it does:</strong></p>
+                                                        <ul>
+                                                            <li>Visits documentation websites (like help pages, guides, API docs)</li>
+                                                            <li>Extracts just the important text content (removes ads, navigation, etc.)</li>
+                                                            <li>Saves everything as clean, readable files</li>
+                                                            <li>Can create Google Docs that work perfectly with NotebookLM AI</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- How many levels deep -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="levelsDeep">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseLevelsDeep">
+                                                        What does "How Many Levels Deep" mean?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseLevelsDeep" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p>This controls how far the tool will "dig" into a website by following links.</p>
+                                                        <p><strong>Think of it like this:</strong></p>
+                                                        <ul>
+                                                            <li><strong>Level 1:</strong> Just the page you entered - no following links</li>
+                                                            <li><strong>Level 2:</strong> The main page + any pages it links to</li>
+                                                            <li><strong>Level 3:</strong> Main page + linked pages + pages those link to</li>
+                                                            <li><strong>Level 5+:</strong> Goes very deep - can take a long time</li>
+                                                        </ul>
+                                                        <p><strong>Recommended settings:</strong></p>
+                                                        <ul>
+                                                            <li><strong>1-2 levels:</strong> For single articles or small sections</li>
+                                                            <li><strong>3 levels:</strong> Good for most documentation sites</li>
+                                                            <li><strong>4-5 levels:</strong> For comprehensive documentation scraping</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Who is this for -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="whoIsThisFor">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseWhoIsThisFor">
+                                                        Who is this tool for?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseWhoIsThisFor" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p>This tool is perfect for anyone who wants to:</p>
+                                                        <ul>
+                                                            <li><strong>Developers & Programmers:</strong> Quickly gather API documentation for reference</li>
+                                                            <li><strong>Researchers & Students:</strong> Collect comprehensive information from multiple pages</li>
+                                                            <li><strong>Content Creators:</strong> Research topics by gathering information from documentation sites</li>
+                                                            <li><strong>AI Enthusiasts:</strong> Create knowledge bases for tools like NotebookLM and ChatGPT</li>
+                                                            <li><strong>Anyone who:</strong> Needs to read through lots of documentation but wants it organized in one place</li>
+                                                        </ul>
+                                                        <p><strong>You don't need to be technical!</strong> The tool is designed to be simple - just enter a website URL and click start.</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- How does it work -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="howItWorks">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseHowItWorks">
+                                                        How does it work?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseHowItWorks" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p>The tool works in simple steps:</p>
+                                                        <ol>
+                                                            <li><strong>You enter a website URL</strong> (like https://docs.python.org)</li>
+                                                            <li><strong>The tool visits that page</strong> and reads the content</li>
+                                                            <li><strong>It finds and follows links</strong> to other pages on the same site</li>
+                                                            <li><strong>It cleans up the content</strong> by removing ads, navigation menus, and other clutter</li>
+                                                            <li><strong>It organizes everything</strong> into a single, clean document</li>
+                                                            <li><strong>You get the results</strong> as downloadable files or Google Docs</li>
+                                                        </ol>
+                                                        <p><strong>Smart features:</strong></p>
+                                                        <ul>
+                                                            <li>Automatically detects different types of documentation sites</li>
+                                                            <li>Skips duplicate pages</li>
+                                                            <li>Waits between requests to be respectful to websites</li>
+                                                            <li>Works with popular documentation frameworks like GitBook, Docusaurus, etc.</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Limits and considerations -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="limits">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseLimits">
+                                                        What are the limits and things to consider?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseLimits" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p><strong>Time & Size Limits:</strong></p>
+                                                        <ul>
+                                                            <li>Large sites can take 10-30 minutes to complete</li>
+                                                            <li>Setting "levels deep" too high can result in thousands of pages</li>
+                                                            <li>Some very large sites might timeout</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>What Works Best:</strong></p>
+                                                        <ul>
+                                                            <li>Documentation sites (docs.python.org, nextjs.org/docs, etc.)</li>
+                                                            <li>Help centers and knowledge bases</li>
+                                                            <li>Static sites with clear navigation</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>What Doesn't Work:</strong></p>
+                                                        <ul>
+                                                            <li>Sites that require login</li>
+                                                            <li>Sites with heavy JavaScript (like single-page apps)</li>
+                                                            <li>Sites that block automated access</li>
+                                                            <li>Social media sites or forums</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>Respectful Usage:</strong></p>
+                                                        <ul>
+                                                            <li>The tool waits between requests to avoid overloading websites</li>
+                                                            <li>Only use this for legitimate research and learning</li>
+                                                            <li>Respect website terms of service</li>
+                                                            <li>Don't scrape private or copyrighted content without permission</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Google Docs and NotebookLM -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="notebookLM">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseNotebookLM">
+                                                        How do I use this with NotebookLM?
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseNotebookLM" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p><strong>NotebookLM</strong> is Google's AI tool that lets you chat with your documents. Here's how to use it with scraped content:</p>
+                                                        <ol>
+                                                            <li><strong>Scrape the documentation</strong> you want to chat with</li>
+                                                            <li><strong>Create a Google Doc</strong> using the "Google Docs" tab</li>
+                                                            <li><strong>Go to <a href="https://notebooklm.google.com" target="_blank">NotebookLM</a></strong> and sign in with your Google account</li>
+                                                            <li><strong>Create a new notebook</strong></li>
+                                                            <li><strong>Add your Google Doc as a source</strong></li>
+                                                            <li><strong>Start asking questions!</strong> The AI will answer based on the documentation you scraped</li>
+                                                        </ol>
+                                                        
+                                                        <p><strong>Why this is useful:</strong></p>
+                                                        <ul>
+                                                            <li>Ask specific questions about documentation</li>
+                                                            <li>Get summaries of complex topics</li>
+                                                            <li>Find information quickly without reading everything</li>
+                                                            <li>The AI only uses the documentation you provided (no hallucinations)</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Troubleshooting -->
+                                            <div class="accordion-item">
+                                                <h2 class="accordion-header" id="troubleshooting">
+                                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                                            data-bs-target="#collapseTroubleshooting">
+                                                        Common problems and solutions
+                                                    </button>
+                                                </h2>
+                                                <div id="collapseTroubleshooting" class="accordion-collapse collapse" 
+                                                     data-bs-parent="#faqAccordion">
+                                                    <div class="accordion-body">
+                                                        <p><strong>Problem: "No content found" or very little content</strong></p>
+                                                        <ul>
+                                                            <li>Try setting "Just This One Page" and test with a single page first</li>
+                                                            <li>The site might use JavaScript - try a different documentation site</li>
+                                                            <li>Check if the URL is correct and publicly accessible</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>Problem: Taking too long or timing out</strong></p>
+                                                        <ul>
+                                                            <li>Reduce the "levels deep" setting (try 2-3 instead of 5+)</li>
+                                                            <li>Use "Just This One Page" for testing</li>
+                                                            <li>Some sites are just very large - try a more specific starting URL</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>Problem: Google Docs creation fails</strong></p>
+                                                        <ul>
+                                                            <li>Make sure you're signed in to Google</li>
+                                                            <li>Check that you have Google Drive space available</li>
+                                                            <li>Try downloading the content and creating the doc manually</li>
+                                                        </ul>
+                                                        
+                                                        <p><strong>Problem: Content looks messy or incomplete</strong></p>
+                                                        <ul>
+                                                            <li>Try different output formats (Markdown usually works best)</li>
+                                                            <li>Some sites have complex layouts that don't convert perfectly</li>
+                                                            <li>You can clean up the content manually after downloading</li>
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">
+                                            <i data-feather="zap"></i>
+                                            Quick Start Guide
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p><strong>Complete beginner? Start here:</strong></p>
+                                        <ol class="small">
+                                            <li>Go to the "Web Scraper" tab</li>
+                                            <li>Enter a documentation URL (like https://docs.python.org)</li>
+                                            <li>Set "How Many Levels Deep" to 2</li>
+                                            <li>Click "Start Scraping"</li>
+                                            <li>Wait for it to finish</li>
+                                            <li>Download your content or create a Google Doc</li>
+                                        </ol>
+                                        
+                                        <div class="mt-3">
+                                            <h6>Good starter URLs to try:</h6>
+                                            <ul class="list-unstyled small">
+                                                <li>• https://docs.python.org/3/tutorial/</li>
+                                                <li>• https://nextjs.org/docs/getting-started</li>
+                                                <li>• https://react.dev/learn</li>
+                                                <li>• https://docs.docker.com/get-started/</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="card mt-3">
+                                    <div class="card-header">
+                                        <h6 class="card-title mb-0">
+                                            <i data-feather="alert-triangle"></i>
+                                            Important Notes
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <ul class="small">
+                                            <li><strong>Be patient:</strong> Large sites can take 10-30 minutes</li>
+                                            <li><strong>Start small:</strong> Test with 1-2 levels first</li>
+                                            <li><strong>Respect websites:</strong> Don't overload them with requests</li>
+                                            <li><strong>Check content:</strong> Some sites may not work perfectly</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- History Tab -->
                     <div class="tab-pane fade" id="history" role="tabpanel">
                         <div class="card">
@@ -382,9 +689,10 @@
                                                 </div>
                                                 <div class="col-md-6">
                                                     <div class="mb-3">
-                                                        <label for="default-depth" class="form-label">Default Depth</label>
+                                                        <label for="default-depth" class="form-label">Default Levels Deep</label>
                                                         <input type="number" class="form-control" id="default-depth" 
                                                                min="1" max="10" value="3">
+                                                        <div class="form-text">How many levels of links to follow by default</div>
                                                     </div>
                                                 </div>
                                             </div>

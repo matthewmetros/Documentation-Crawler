@@ -6,7 +6,19 @@ This is a comprehensive Python web application for scraping documentation websit
 
 ## User Preferences
 
-Preferred communication style: Simple, everyday language.
+- **Communication style**: Simple, everyday language that non-technical users can understand
+- **Interface terminology**: Use clear, everyday terms instead of technical jargon (e.g., "How many levels deep?" instead of "Max Depth")
+- **Help and documentation**: Comprehensive FAQ sections with practical examples and troubleshooting
+
+## Recent Changes
+
+**July 22, 2025 - User Interface Improvements**
+- ✓ Updated terminology throughout interface to use simpler, more accessible language
+- ✓ Changed "Max Depth" to "How Many Levels Deep?" with explanatory tooltips and help text
+- ✓ Added comprehensive FAQ section covering tool usage, limits, target audience, and NotebookLM integration
+- ✓ Enhanced form labels with helpful descriptions and context
+- ✓ Updated CSS styling for better FAQ readability and accordion functionality
+- ✓ Improved example text and tips to use clearer explanations
 
 ## System Architecture
 
