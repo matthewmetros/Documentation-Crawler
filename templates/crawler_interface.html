@@ -622,9 +622,32 @@
             }
 
             async onCrawlingComplete() {
-                console.log('✅ Crawling completed');
+                console.log('✅ TRACE: onCrawlingComplete() - FUNCTION ENTRY');
+                console.log('✅ TRACE: Crawling completed, updating UI');
                 this.updateButtons(false);
+                console.log('✅ TRACE: Buttons updated, loading results');
                 await this.loadResults();
+                console.log('✅ TRACE: Results loaded, checking results container visibility');
+                
+                const resultsContainer = document.getElementById('results-container');
+                if (resultsContainer) {
+                    console.log('✅ TRACE: Results container found, display style:', resultsContainer.style.display);
+                    console.log('✅ TRACE: Results container visible:', resultsContainer.offsetHeight > 0);
+                } else {
+                    console.error('✅ ERROR: Results container not found in DOM');
+                }
+                
+                const downloadBtn = document.getElementById('download-btn');
+                const downloadSingleBtn = document.getElementById('download-single-btn');
+                console.log('✅ TRACE: Download ZIP button found:', !!downloadBtn);
+                console.log('✅ TRACE: Download Single button found:', !!downloadSingleBtn);
+                
+                if (downloadSingleBtn) {
+                    console.log('✅ TRACE: Single download button visibility:', downloadSingleBtn.offsetHeight > 0);
+                    console.log('✅ TRACE: Single download button disabled:', downloadSingleBtn.disabled);
+                }
+                
+                console.log('✅ TRACE: onCrawlingComplete() - FUNCTION EXIT');
             }
 
             onCrawlingFinished() {
@@ -647,14 +670,33 @@
             }
 
             displayResults(results) {
-                console.log('📊 Displaying results:', results);
+                console.log('📊 TRACE: displayResults() - FUNCTION ENTRY');
+                console.log('📊 TRACE: Results object:', results);
+                console.log('📊 TRACE: Results total_pages:', results.total_pages);
+                console.log('📊 TRACE: Results content keys:', Object.keys(results.content || {}));
+                console.log('📊 TRACE: Results errors:', results.errors);
                 
                 document.getElementById('total-pages').textContent = results.total_pages || 0;
                 document.getElementById('successful-pages').textContent = Object.keys(results.content || {}).length;
                 document.getElementById('error-count').textContent = (results.errors || []).length;
                 
-                document.getElementById('results-container').style.display = 'block';
-                document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+                console.log('📊 TRACE: Setting results container to block display');
+                const resultsContainer = document.getElementById('results-container');
+                resultsContainer.style.display = 'block';
+                console.log('📊 TRACE: Results container display set to:', resultsContainer.style.display);
+                
+                console.log('📊 TRACE: Scrolling to results container');
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                // Check button visibility after display change
+                const downloadSingleBtn = document.getElementById('download-single-btn');
+                if (downloadSingleBtn) {
+                    console.log('📊 TRACE: Single download button after display change - visible:', downloadSingleBtn.offsetHeight > 0);
+                } else {
+                    console.error('📊 ERROR: Single download button not found after results display');
+                }
+                
+                console.log('📊 TRACE: displayResults() - FUNCTION EXIT');
             }
 
             async downloadResults() {
@@ -690,34 +732,79 @@
             }
 
             async downloadSingleDocument() {
-                if (!this.currentSessionId) return;
+                console.log('📄 TRACE: downloadSingleDocument() - FUNCTION ENTRY');
+                console.log('📄 TRACE: this.currentSessionId value:', this.currentSessionId);
+                console.log('📄 TRACE: typeof currentSessionId:', typeof this.currentSessionId);
+                
+                if (!this.currentSessionId) {
+                    console.error('📄 ERROR: No current session ID available for single document download');
+                    this.addLogEntry('No active session for single document download', 'error');
+                    return;
+                }
 
-                console.log('📄 TRACE: downloadSingleDocument() - Entry point');
-                console.log('📄 TRACE: Current session ID:', this.currentSessionId);
-                console.log('📄 Downloading single consolidated document');
+                console.log('📄 TRACE: Session ID validation passed');
+                console.log('📄 TRACE: About to fetch from:', `/api/download-single/${this.currentSessionId}`);
+                console.log('📄 TRACE: Starting single consolidated document download');
                 
                 try {
+                    console.log('📄 TRACE: Executing fetch request...');
                     const response = await fetch(`/api/download-single/${this.currentSessionId}`);
+                    console.log('📄 TRACE: Fetch response received');
+                    console.log('📄 TRACE: Response status:', response.status);
+                    console.log('📄 TRACE: Response statusText:', response.statusText);
+                    console.log('📄 TRACE: Response headers:', response.headers);
+                    console.log('📄 TRACE: Response ok:', response.ok);
                     
                     if (response.ok) {
+                        console.log('📄 TRACE: Response OK - processing blob...');
                         const blob = await response.blob();
+                        console.log('📄 TRACE: Blob created, size:', blob.size, 'type:', blob.type);
+                        
                         const url = window.URL.createObjectURL(blob);
+                        console.log('📄 TRACE: Object URL created:', url);
+                        
                         const a = document.createElement('a');
                         a.style.display = 'none';
                         a.href = url;
-                        a.download = `documentation_complete_${new Date().toISOString().slice(0,10)}.md`;
+                        const filename = `documentation_complete_${new Date().toISOString().slice(0,10)}.md`;
+                        a.download = filename;
+                        console.log('📄 TRACE: Download link created with filename:', filename);
+                        
                         document.body.appendChild(a);
+                        console.log('📄 TRACE: Download link added to DOM');
+                        
                         a.click();
+                        console.log('📄 TRACE: Download link clicked');
+                        
                         window.URL.revokeObjectURL(url);
+                        console.log('📄 TRACE: Object URL revoked');
                         
                         this.addLogEntry('Single document download started successfully', 'success');
+                        console.log('📄 TRACE: Success message logged');
                     } else {
-                        this.addLogEntry('Failed to download single document', 'error');
+                        console.error('📄 ERROR: Response not OK');
+                        console.error('📄 ERROR: Status:', response.status);
+                        console.error('📄 ERROR: Status text:', response.statusText);
+                        
+                        // Try to get error details from response
+                        try {
+                            const errorData = await response.text();
+                            console.error('📄 ERROR: Response body:', errorData);
+                        } catch (e) {
+                            console.error('📄 ERROR: Could not read response body:', e);
+                        }
+                        
+                        this.addLogEntry(`Failed to download single document (${response.status})`, 'error');
                     }
                 } catch (error) {
-                    console.error('Error downloading single document:', error);
+                    console.error('📄 CRITICAL ERROR: Exception in downloadSingleDocument');
+                    console.error('📄 ERROR: Error type:', error.constructor.name);
+                    console.error('📄 ERROR: Error message:', error.message);
+                    console.error('📄 ERROR: Error stack:', error.stack);
                     this.addLogEntry(`Single document download error: ${error.message}`, 'error');
                 }
+                
+                console.log('📄 TRACE: downloadSingleDocument() - FUNCTION EXIT');
             }
 
             async loadSessions() {
