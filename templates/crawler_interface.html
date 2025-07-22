@@ -464,10 +464,16 @@
 
             async startCrawling() {
                 console.log('🚀 TRACE: startCrawling() - Entry point');
-                console.log('🚀 Starting crawling process');
+                
+                // IMMEDIATE UI FEEDBACK - Fix frozen button issue
+                console.log('🚀 TRACE: Updating button state to loading...');
+                this.updateButtons(true);
+                this.addLogEntry('Starting crawling session...', 'info');
+                this.showProgress();
                 
                 const formData = this.getFormData();
                 console.log('📝 TRACE: Configuration received from form:', formData);
+                console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
                 console.log('📝 TRACE: About to send configuration to backend via /api/start-crawling');
 
                 try {
@@ -480,22 +486,23 @@
                     });
 
                     const result = await response.json();
+                    console.log('🚀 TRACE: Received response from backend:', result);
                     
                     if (result.success) {
                         this.currentSessionId = result.session_id;
                         this.socket.emit('join_session', { session_id: this.currentSessionId });
-                        
-                        this.addLogEntry('Crawling session started successfully', 'success');
-                        this.showProgress();
-                        this.updateButtons(true);
-                        
+                        this.addLogEntry('Crawling session initialized successfully', 'success');
                         document.getElementById('session-id').textContent = this.currentSessionId;
+                        console.log('🚀 TRACE: Session started successfully with ID:', this.currentSessionId);
                     } else {
-                        this.addLogEntry(`Failed to start crawling: ${result.error}`, 'error');
+                        console.log('🚀 TRACE: Session start failed:', result.error);
+                        throw new Error(result.error || 'Unknown error occurred');
                     }
                 } catch (error) {
-                    console.error('Error starting crawling:', error);
-                    this.addLogEntry(`Error starting crawling: ${error.message}`, 'error');
+                    console.error('🚀 TRACE: Error starting crawling:', error);
+                    // ONLY reset button state on error
+                    this.updateButtons(false);
+                    this.addLogEntry(`Failed to start crawling: ${error.message}`, 'error');
                 }
             }
 

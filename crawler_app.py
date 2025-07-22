@@ -84,11 +84,19 @@ class CrawlerWebInterface:
     def start_crawling(self, config_data: Dict):
         """Start the crawling process in a separate thread."""
         try:
+            logger.info("🚀 TRACE: start_crawling() - Entry point")
+            logger.info(f"🚀 TRACE: Received config_data: {config_data}")
+            
+            # CRITICAL DEBUG: Check if max_crawl_depth is in config_data
+            max_crawl_depth = config_data.get('max_crawl_depth', 2)
+            logger.info(f"🚀 TRACE: DEPTH CONFIGURATION - User selected: {max_crawl_depth}")
+            
             self.status = "initializing"
             self.stop_requested = False
             self.emit_status("Initializing crawler configuration...")
             
             # Create crawler configuration
+            logger.info("🚀 TRACE: Creating CrawlerConfig object...")
             self.config = CrawlerConfig(
                 base_url=config_data.get('url', ''),
                 language=config_data.get('language', 'en'),
@@ -97,8 +105,10 @@ class CrawlerWebInterface:
                 timeout=config_data.get('timeout', 10),
                 max_retries=config_data.get('max_retries', 3),
                 retry_delay=config_data.get('retry_delay', 1),
-                chunk_size=config_data.get('chunk_size', 3)
+                chunk_size=config_data.get('chunk_size', 3),
+                max_crawl_depth=max_crawl_depth  # CRITICAL FIX: Pass the depth parameter
             )
+            logger.info(f"🚀 TRACE: CrawlerConfig created with max_crawl_depth={self.config.max_crawl_depth}")
             
             self.emit_status(f"Creating crawler for URL: {self.config.base_url}")
             
