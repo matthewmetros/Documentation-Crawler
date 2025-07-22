@@ -519,31 +519,7 @@
                 
                 console.log('✅ VALIDATION PASSED: Proceeding with crawling');
                 
-                // EMERGENCY FIX: Comprehensive synchronous error detection
-                try {
-                    console.log('🔧 EMERGENCY: Starting synchronous error detection');
-                    console.log('🔧 EMERGENCY: this context:', this);
-                    console.log('🔧 EMERGENCY: this.getFormData exists:', typeof this.getFormData);
-                    
-                    // Test DOM element access
-                    const form = document.getElementById('crawler-form');
-                    const urlInput = document.getElementById('url-input');
-                    const depthSelect = document.getElementById('crawl-depth');
-                    console.log('🔧 EMERGENCY: Form element found:', !!form);
-                    console.log('🔧 EMERGENCY: URL input found:', !!urlInput);
-                    console.log('🔧 EMERGENCY: Depth select found:', !!depthSelect);
-                    
-                    // Test getFormData call with error boundary
-                    console.log('🔧 EMERGENCY: About to test getFormData()');
-                    const testConfig = this.getFormData();
-                    console.log('🔧 EMERGENCY: getFormData() SUCCESS:', testConfig);
-                    
-                } catch (emergencyError) {
-                    console.error('🚨 EMERGENCY ERROR CAUGHT:', emergencyError);
-                    console.error('🚨 EMERGENCY STACK:', emergencyError.stack);
-                    this.addLogEntry(`Critical error: ${emergencyError.message}`, 'error');
-                    return; // Stop execution on synchronous error
-                }
+
                 
                 // STEP 2: NOW make UI changes (only after validation passes)
                 const startBtn = document.getElementById('start-btn');
@@ -594,19 +570,13 @@
                 console.log('🚀 TRACE: IMMEDIATE UI feedback applied - button changed, progress visible');
                 
                 try {
-                    // PHASE 2 FIX: Debug execution flow before getFormData()
                     console.log('📋 DIAGNOSTIC: About to call getFormData()');
-                    console.log('📋 DIAGNOSTIC: this object:', this);
-                    console.log('📋 DIAGNOSTIC: typeof this.getFormData:', typeof this.getFormData);
                     
                     let formData;
                     try {
-                        console.log('📋 DIAGNOSTIC: Calling this.getFormData() now...');
                         formData = this.getFormData();
-                        console.log('📋 DIAGNOSTIC: getFormData() call completed, result:', formData);
                         console.log('📋 SUCCESS: getFormData() completed successfully');
                         console.log('📝 TRACE: Configuration received from form:', formData);
-                        console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
                     } catch (getFormDataError) {
                         console.error('📋 ERROR: getFormData() failed:', getFormDataError);
                         throw new Error(`Form data collection failed: ${getFormDataError.message}`);

@@ -1,0 +1,588 @@
+<script>
+        // Initialize Feather icons
+        feather.replace();
+
+        class CrawlerInterface {
+            constructor() {
+                this.socket = null;
+                this.currentSessionId = null;
+                this.isConnected = false;
+                
+                // Global unhandled rejection handler for debugging
+                window.addEventListener('unhandledrejection', (event) => {
+                    console.error('🚨 UNHANDLED REJECTION CAUGHT:', event.reason);
+                    console.error('🚨 PROMISE:', event.promise);
+                    console.error('🚨 STACK:', event.reason?.stack);
+                });
+                
+                this.initializeSocketIO();
+                this.initializeEventListeners();
+                this.loadSessions();
+            }
+
+            initializeSocketIO() {
+                console.log('🔌 Initializing Socket.IO connection');
+                this.socket = io();
+
+                this.socket.on('connect', () => {
+                    console.log('✅ Connected to server');
+                    this.isConnected = true;
+                    this.updateConnectionStatus('Connected', 'success');
+                });
+
+                this.socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
+                    this.isConnected = false;
+                    this.updateConnectionStatus('Disconnected', 'error');
+                });
+
+                this.socket.on('crawler_status', (data) => {
+                    this.handleStatusUpdate(data);
+                });
+
+                this.socket.on('crawler_progress', (data) => {
+                    this.handleProgressUpdate(data);
+                });
+            }
+
+            initializeEventListeners() {
+                console.log('🎯 Setting up event listeners');
+                
+                document.getElementById('crawler-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.startCrawling();
+                });
+
+                document.getElementById('stop-btn').addEventListener('click', () => {
+                    this.stopCrawling();
+                });
+
+                document.getElementById('clear-btn').addEventListener('click', () => {
+                    this.clearForm();
+                });
+
+                document.getElementById('download-btn').addEventListener('click', () => {
+                    this.downloadResults();
+                });
+
+                document.getElementById('download-single-btn').addEventListener('click', () => {
+                    this.downloadSingleDocument();
+                });
+            }
+
+            validateFormData() {
+                console.log('✅ VALIDATION: Starting form validation');
+                
+                // Extract format selections
+                const store_markdown = document.getElementById('store-markdown').checked;
+                const store_raw_html = document.getElementById('store-html').checked;
+                const store_text = document.getElementById('store-text').checked;
+                
+                const selectedFormats = [];
+                if (store_markdown) selectedFormats.push('Markdown');
+                if (store_raw_html) selectedFormats.push('HTML');
+                if (store_text) selectedFormats.push('Text');
+                
+                console.log('✅ VALIDATION: Selected formats:', selectedFormats.join(', ') || 'NONE');
+                
+                if (selectedFormats.length === 0) {
+                    console.error('❌ VALIDATION: No output formats selected');
+                    return {
+                        valid: false,
+                        error: 'Please select at least one output format (Markdown, HTML, or Text)'
+                    };
+                }
+                
+                console.log('✅ VALIDATION: Passed -', selectedFormats.length, 'formats selected');
+                return { valid: true };
+            }
+
+            async startCrawling() {
+                console.log('🚀 TRACE: startCrawling() - Entry point');
+                
+                // STEP 1: VALIDATE FIRST (before any UI changes)
+                const validation = this.validateFormData();
+                if (!validation.valid) {
+                    console.error('❌ VALIDATION FAILED:', validation.error);
+                    this.addLogEntry(validation.error, 'error');
+                    return; // Exit early, no UI changes made
+                }
+                
+                console.log('✅ VALIDATION PASSED: Proceeding with crawling');
+                
+                // STEP 2: NOW make UI changes (only after validation passes)
+                const startBtn = document.getElementById('start-btn');
+                
+                // Create reset function
+                const resetButton = () => {
+                    startBtn.textContent = 'Start Crawling';
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('btn-warning');
+                    startBtn.classList.add('btn-primary');
+                    console.log('🔄 RESET: Button state reset to normal');
+                };
+                
+                // Instant button state change
+                startBtn.textContent = 'Starting...';
+                startBtn.disabled = true;
+                startBtn.classList.add('btn-warning');
+                startBtn.classList.remove('btn-primary');
+                
+                // 30-second timeout recovery
+                const timeoutId = setTimeout(() => {
+                    if (startBtn.textContent === 'Starting...') {
+                        console.warn('🚨 TIMEOUT: Start button stuck - auto-recovering');
+                        resetButton();
+                        this.addLogEntry('Start timeout - please try again', 'warning');
+                    }
+                }, 30000);
+                
+                try {
+                    console.log('📋 DIAGNOSTIC: About to call getFormData()');
+                    console.log('📋 DIAGNOSTIC: this object:', this);
+                    console.log('📋 DIAGNOSTIC: typeof this.getFormData:', typeof this.getFormData);
+                    
+                    let formData;
+                    try {
+                        formData = this.getFormData();
+                        console.log('📋 SUCCESS: getFormData() completed successfully');
+                        console.log('📝 TRACE: Configuration received from form:', formData);
+                    } catch (getFormDataError) {
+                        console.error('📋 ERROR: getFormData() failed:', getFormDataError);
+                        throw new Error(`Form data collection failed: ${getFormDataError.message}`);
+                    }
+                    
+                    console.log('📝 TRACE: About to send configuration to backend');
+
+                    let response;
+                    try {
+                        response = await fetch('/api/start-crawling', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(formData)
+                        });
+                        console.log('🌐 SUCCESS: Fetch request completed, status:', response.status);
+                    } catch (fetchError) {
+                        console.error('🌐 ERROR: Network request failed:', fetchError);
+                        throw new Error(`Network request failed: ${fetchError.message}`);
+                    }
+
+                    let result;
+                    try {
+                        result = await response.json();
+                        console.log('📡 SUCCESS: JSON parsing completed');
+                        console.log('🚀 TRACE: Received response from backend:', result);
+                    } catch (jsonError) {
+                        console.error('📡 ERROR: JSON parsing failed:', jsonError);
+                        throw new Error(`Response parsing failed: ${jsonError.message}`);
+                    }
+                    
+                    if (result.success) {
+                        console.log('✅ SUCCESS: Backend confirmed session creation');
+                        clearTimeout(timeoutId);
+                        this.currentSessionId = result.session_id;
+                        this.socket.emit('join_session', { session_id: this.currentSessionId });
+                        this.addLogEntry('Crawling session initialized successfully', 'success');
+                        
+                        const sessionIdElement = document.getElementById('session-id');
+                        if (sessionIdElement) {
+                            sessionIdElement.textContent = this.currentSessionId;
+                            console.log('✅ SUCCESS: Session ID displayed in UI');
+                        }
+                        
+                        console.log('🚀 TRACE: Session started successfully with ID:', this.currentSessionId);
+                    } else {
+                        console.log('❌ BACKEND ERROR: Session start failed:', result.error);
+                        throw new Error(result.error || 'Unknown error occurred');
+                    }
+                } catch (error) {
+                    console.error('❌ CRITICAL ERROR: Crawling start failed:', error);
+                    console.error('❌ ERROR STACK:', error.stack);
+                    clearTimeout(timeoutId);
+                    resetButton();
+                    
+                    let userMessage = 'Failed to start crawling';
+                    if (error.message.includes('Form data collection')) {
+                        userMessage = 'Form validation error - please check your input fields';
+                    } else if (error.message.includes('Network request')) {
+                        userMessage = 'Network connection error - please check your internet connection';
+                    } else if (error.message.includes('Response parsing')) {
+                        userMessage = 'Server response error - please try again';
+                    } else {
+                        userMessage = `Failed to start crawling: ${error.message}`;
+                    }
+                    
+                    this.addLogEntry(userMessage, 'error');
+                }
+            }
+
+            // FIXED: Single getFormData function with proper error handling
+            getFormData() {
+                console.log('📋 DIAGNOSTIC: getFormData() - ENTRY (Enhanced Version)');
+                
+                try {
+                    // DOM element validation
+                    const urlElement = document.getElementById('url-input');
+                    const languageElement = document.getElementById('language-select');
+                    const depthElement = document.getElementById('crawl-depth');
+                    
+                    console.log('📋 DIAGNOSTIC: Validating DOM elements');
+                    if (!urlElement) throw new Error('URL input element not found');
+                    if (!languageElement) throw new Error('Language select element not found');
+                    
+                    console.log('📋 DIAGNOSTIC: Collecting form data');
+                    const formData = {
+                        url: urlElement.value,
+                        language: languageElement.value,
+                        max_workers: parseInt(document.getElementById('max-workers')?.value || 5),
+                        timeout: parseInt(document.getElementById('timeout')?.value || 10),
+                        max_retries: parseInt(document.getElementById('max-retries')?.value || 3),
+                        chunk_size: parseInt(document.getElementById('chunk-size')?.value || 3),
+                        max_crawl_depth: parseInt(depthElement?.value || 2),
+                        store_markdown: document.getElementById('store-markdown')?.checked || false,
+                        store_raw_html: document.getElementById('store-html')?.checked || false,
+                        store_text: document.getElementById('store-text')?.checked || false,
+                        debug: document.getElementById('debug-mode')?.checked || false
+                    };
+                    
+                    console.log('📋 SUCCESS: Form data collected:', formData);
+                    console.log('📋 DIAGNOSTIC: getFormData() - EXIT');
+                    
+                    return formData;
+                } catch (error) {
+                    console.error('📋 CRITICAL ERROR: getFormData() failed:', error);
+                    throw new Error(`Form data collection failed: ${error.message}`);
+                }
+            }
+
+            async stopCrawling() {
+                if (!this.currentSessionId) return;
+
+                console.log('⏹️ Stopping crawling process');
+                
+                try {
+                    const response = await fetch(`/api/stop-crawling/${this.currentSessionId}`, {
+                        method: 'POST'
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.addLogEntry('Stop request sent to crawler', 'warning');
+                    } else {
+                        this.addLogEntry(`Failed to stop crawling: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error stopping crawling:', error);
+                    this.addLogEntry(`Error stopping crawling: ${error.message}`, 'error');
+                }
+            }
+
+            handleStatusUpdate(data) {
+                console.log('📊 DIAGNOSTIC: handleStatusUpdate() - ENTRY');
+                console.log('📊 DIAGNOSTIC: Status update data:', data);
+                
+                this.addLogEntry(`[${data.level.toUpperCase()}] ${data.message}`, data.level);
+                this.updateCrawlerStatus(data.status);
+                document.getElementById('current-status').textContent = data.message;
+                
+                if (data.status === 'completed') {
+                    console.log('📊 DIAGNOSTIC: Status is COMPLETED - calling onCrawlingComplete()');
+                    this.onCrawlingComplete();
+                } else if (data.status === 'error' || data.status === 'stopped') {
+                    console.log('📊 DIAGNOSTIC: Status is ERROR/STOPPED - calling onCrawlingFinished()');
+                    this.onCrawlingFinished();
+                }
+            }
+
+            handleProgressUpdate(data) {
+                console.log('📈 Progress update:', data);
+                
+                const progressBar = document.getElementById('progress-bar');
+                const currentSpan = document.getElementById('progress-current');
+                const totalSpan = document.getElementById('progress-total');
+                
+                progressBar.style.width = `${data.percent}%`;
+                progressBar.setAttribute('aria-valuenow', data.percent);
+                
+                currentSpan.textContent = data.current;
+                totalSpan.textContent = data.total;
+            }
+
+            async onCrawlingComplete() {
+                console.log('✅ TRACE: onCrawlingComplete() - FUNCTION ENTRY');
+                this.updateButtons(false);
+                
+                // Results display with retry mechanism
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        await this.loadResults();
+                        break;
+                    } catch (error) {
+                        retries--;
+                        console.warn(`⚠️ RETRY: Result loading failed, ${retries} attempts remaining:`, error.message);
+                        if (retries === 0) {
+                            console.error('❌ FAILED: All result loading attempts exhausted');
+                            this.addLogEntry('Error loading results after multiple attempts', 'error');
+                            return;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                this.forceShowResults();
+            }
+
+            forceShowResults() {
+                console.log('🎯 FORCE: forceShowResults() - ENTRY');
+                const resultsContainer = document.getElementById('results-container');
+                
+                if (!resultsContainer) {
+                    console.error('🎯 ERROR: Results container not found in DOM');
+                    return;
+                }
+                
+                // Multiple approaches to ensure visibility
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.style.display = 'block';
+                resultsContainer.style.visibility = 'visible';
+                resultsContainer.style.opacity = '1';
+                
+                console.log('🎯 FORCE: Results container visibility set');
+                
+                // Force button visibility
+                const downloadBtn = document.getElementById('download-btn');
+                const downloadSingleBtn = document.getElementById('download-single-btn');
+                
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'inline-block';
+                    console.log('🎯 FORCE: ZIP download button forced visible');
+                }
+                
+                if (downloadSingleBtn) {
+                    downloadSingleBtn.style.display = 'inline-block';
+                    console.log('🎯 FORCE: Single download button forced visible');
+                }
+                
+                // Scroll to results
+                setTimeout(() => {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+
+            onCrawlingFinished() {
+                console.log('🔄 Crawling finished (stopped or error)');
+                this.updateButtons(false);
+            }
+
+            async loadResults() {
+                if (!this.currentSessionId) return;
+
+                try {
+                    const response = await fetch(`/api/results/${this.currentSessionId}`);
+                    const results = await response.json();
+                    
+                    this.displayResults(results);
+                } catch (error) {
+                    console.error('Error loading results:', error);
+                    this.addLogEntry(`Error loading results: ${error.message}`, 'error');
+                }
+            }
+
+            displayResults(results) {
+                console.log('📊 DIAGNOSTIC: displayResults() - FUNCTION ENTRY');
+                
+                document.getElementById('total-pages').textContent = results.total_pages || 0;
+                document.getElementById('successful-pages').textContent = Object.keys(results.content || {}).length;
+                document.getElementById('error-count').textContent = (results.errors || []).length;
+                
+                const resultsContainer = document.getElementById('results-container');
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            async downloadResults() {
+                if (!this.currentSessionId) return;
+
+                console.log('💾 Downloading results');
+                
+                try {
+                    const response = await fetch(`/api/download/${this.currentSessionId}`);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `documentation_crawl_${new Date().toISOString().slice(0,10)}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        
+                        this.addLogEntry('Download started successfully', 'success');
+                    } else {
+                        this.addLogEntry('Failed to download results', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error downloading results:', error);
+                    this.addLogEntry(`Download error: ${error.message}`, 'error');
+                }
+            }
+
+            async downloadSingleDocument() {
+                console.log('📄 TRACE: downloadSingleDocument() - FUNCTION ENTRY');
+                
+                if (!this.currentSessionId) {
+                    console.error('📄 ERROR: No current session ID available');
+                    this.addLogEntry('No active session for single document download', 'error');
+                    return;
+                }
+
+                console.log('📄 TRACE: Starting single document download');
+                
+                try {
+                    const response = await fetch(`/api/download-single/${this.currentSessionId}`);
+                    console.log('📄 TRACE: Response received, status:', response.status);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        const filename = `documentation_complete_${new Date().toISOString().slice(0,10)}.md`;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        
+                        this.addLogEntry('Single document download started successfully', 'success');
+                    } else {
+                        console.error('📄 ERROR: Response not OK, status:', response.status);
+                        this.addLogEntry(`Failed to download single document (${response.status})`, 'error');
+                    }
+                } catch (error) {
+                    console.error('📄 CRITICAL ERROR:', error);
+                    this.addLogEntry(`Single document download error: ${error.message}`, 'error');
+                }
+            }
+
+            async loadSessions() {
+                console.log('🔄 DIAGNOSTIC: loadSessions() - ENTRY');
+                try {
+                    const response = await fetch('/api/sessions');
+                    const data = await response.json();
+                    
+                    // Auto-recover completed sessions
+                    const sessions = data.sessions || {};
+                    for (const [sessionId, session] of Object.entries(sessions)) {
+                        if (session.status === 'completed' && !this.currentSessionId) {
+                            console.log(`🔄 AUTO-RECOVERY: Found completed session ${sessionId}`);
+                            this.currentSessionId = sessionId;
+                            document.getElementById('session-id').textContent = this.currentSessionId;
+                            await this.onCrawlingComplete();
+                            break;
+                        }
+                    }
+                    
+                    this.displaySessions(sessions);
+                } catch (error) {
+                    console.error('Error loading sessions:', error);
+                }
+            }
+
+            displaySessions(sessions) {
+                const container = document.getElementById('sessions-list');
+                
+                if (Object.keys(sessions).length === 0) {
+                    container.innerHTML = '<p class="text-muted">No active crawling sessions</p>';
+                    return;
+                }
+
+                let html = '';
+                for (const [sessionId, session] of Object.entries(sessions)) {
+                    html += `
+                        <div class="session-item mb-2 p-2 border rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${session.url}</strong>
+                                    <span class="session-status status-${session.status}">${session.status}</span>
+                                </div>
+                                <div>
+                                    <small>${session.progress}/${session.total_pages} pages</small>
+                                    <code class="ms-2">${sessionId.slice(0, 8)}...</code>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            }
+
+            updateConnectionStatus(status, type) {
+                const statusEl = document.getElementById('connection-status');
+                statusEl.textContent = status;
+                statusEl.className = `session-status status-${type}`;
+            }
+
+            updateCrawlerStatus(status) {
+                const statusEl = document.getElementById('crawler-status');
+                statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                statusEl.className = `session-status status-${status}`;
+                
+                const progressContainer = document.getElementById('progress-container');
+                if (status === 'crawling') {
+                    progressContainer.classList.add('crawling-indicator');
+                } else {
+                    progressContainer.classList.remove('crawling-indicator');
+                }
+            }
+
+            showProgress() {
+                document.getElementById('progress-container').style.display = 'block';
+            }
+
+            updateButtons(crawling) {
+                document.getElementById('start-btn').disabled = crawling;
+                document.getElementById('stop-btn').disabled = !crawling;
+                
+                if (crawling) {
+                    document.getElementById('start-btn').innerHTML = '<i data-feather="loader"></i> Crawling...';
+                } else {
+                    document.getElementById('start-btn').innerHTML = '<i data-feather="play"></i> Start Crawling';
+                }
+                feather.replace();
+            }
+
+            clearForm() {
+                document.getElementById('crawler-form').reset();
+                document.getElementById('progress-container').style.display = 'none';
+                document.getElementById('results-container').style.display = 'none';
+                this.currentSessionId = null;
+                this.addLogEntry('Form cleared and reset', 'info');
+            }
+
+            addLogEntry(message, level = 'info') {
+                const container = document.getElementById('log-container');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${level}`;
+                entry.innerHTML = `[${timestamp}] ${message}`;
+                
+                container.appendChild(entry);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Initialize the interface when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Initializing Crawler Interface');
+            window.crawlerInterface = new CrawlerInterface();
+        });
+    </script>
