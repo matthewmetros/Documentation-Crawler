@@ -471,10 +471,47 @@
                 });
             }
 
+            validateFormData() {
+                console.log('✅ VALIDATION: Starting form validation');
+                
+                // Extract format selections
+                const store_markdown = document.getElementById('store-markdown').checked;
+                const store_raw_html = document.getElementById('store-html').checked;
+                const store_text = document.getElementById('store-text').checked;
+                
+                const selectedFormats = [];
+                if (store_markdown) selectedFormats.push('Markdown');
+                if (store_raw_html) selectedFormats.push('HTML');
+                if (store_text) selectedFormats.push('Text');
+                
+                console.log('✅ VALIDATION: Selected formats:', selectedFormats.join(', ') || 'NONE');
+                
+                if (selectedFormats.length === 0) {
+                    console.error('❌ VALIDATION: No output formats selected');
+                    return {
+                        valid: false,
+                        error: 'Please select at least one output format (Markdown, HTML, or Text)'
+                    };
+                }
+                
+                console.log('✅ VALIDATION: Passed -', selectedFormats.length, 'formats selected');
+                return { valid: true };
+            }
+
             async startCrawling() {
                 console.log('🚀 TRACE: startCrawling() - Entry point');
                 
-                // IMMEDIATE visual changes (no async delay)
+                // STEP 1: VALIDATE FIRST (before any UI changes)
+                const validation = this.validateFormData();
+                if (!validation.valid) {
+                    console.error('❌ VALIDATION FAILED:', validation.error);
+                    this.addLogEntry(validation.error, 'error');
+                    return; // Exit early, no UI changes made
+                }
+                
+                console.log('✅ VALIDATION PASSED: Proceeding with crawling');
+                
+                // STEP 2: NOW make UI changes (only after validation passes)
                 const startBtn = document.getElementById('start-btn');
                 
                 // PHASE 2: BUTTON STATE RECOVERY - Create reset function
@@ -577,7 +614,7 @@
             }
 
             getFormData() {
-                console.log('📋 TRACE: getFormData() - Starting form data collection');
+                console.log('📋 TRACE: getFormData() - Starting (validation already passed)');
                 
                 const formData = {
                     url: document.getElementById('url-input').value,
@@ -598,21 +635,6 @@
                 console.log('  - store_markdown:', formData.store_markdown);
                 console.log('  - store_raw_html:', formData.store_raw_html);
                 console.log('  - store_text:', formData.store_text);
-                
-                // PHASE 1: FORMAT VALIDATION - Prevent submission with no formats
-                const selectedFormats = [];
-                if (formData.store_markdown) selectedFormats.push('Markdown');
-                if (formData.store_raw_html) selectedFormats.push('HTML');
-                if (formData.store_text) selectedFormats.push('Text');
-                
-                console.log('📋 TRACE: Selected output formats:', selectedFormats.join(', ') || 'NONE');
-                
-                if (selectedFormats.length === 0) {
-                    console.error('📋 VALIDATION ERROR: No output formats selected');
-                    throw new Error('Please select at least one output format (Markdown, HTML, or Text)');
-                }
-                
-                console.log('📋 TRACE: Format validation passed -', selectedFormats.length, 'formats selected');
                 console.log('📋 TRACE: getFormData() - Completed');
                 
                 return formData;
