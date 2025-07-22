@@ -415,8 +415,20 @@ def download_single_document(session_id):
     try:
         logger.info(f"📄 Generating single document for session: {session_id}")
         
-        # Get crawling results
-        results = get_session_results(session_id)
+        # Get crawling results from active sessions or completed sessions
+        session_data = active_sessions.get(session_id)
+        if not session_data:
+            return jsonify({'error': 'Session not found'}), 404
+            
+        crawler = session_data['crawler']
+        if crawler.status != 'completed':
+            return jsonify({'error': 'Crawling not completed yet'}), 400
+            
+        results = {
+            'content': crawler.results,
+            'total_pages': crawler.total_pages,
+            'errors': getattr(crawler, 'errors', [])
+        }
         if not results:
             return jsonify({'error': 'Session not found or no results available'}), 404
             

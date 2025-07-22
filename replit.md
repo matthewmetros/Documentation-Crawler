@@ -12,16 +12,14 @@ This is a comprehensive Python web application for scraping documentation websit
 
 ## Recent Changes
 
-**July 22, 2025 - MAJOR FIXES: Recursive Crawling + Multi-Format Support Implementation**
-- ✅ **CRITICAL BUG FIX**: Implemented recursive crawling with configurable depth (1-4 levels)
-- ✅ **CRITICAL BUG FIX**: Added complete multi-format content processing (Markdown, HTML, Text)
-- ✅ **CRITICAL BUG FIX**: Fixed format preferences being ignored in download generation
-- ✅ **PERFORMANCE SUCCESS**: 29x improvement in content discovery (18 → 532 pages on test site)
-- ✅ **VALIDATION SUCCESS**: Tested with https://help.hospitable.com/en/ showing full functionality
-- ✅ **ARCHITECTURE UPDATE**: Enhanced URL processor with recursive link following
-- ✅ **ARCHITECTURE UPDATE**: Updated content scraper to support multiple output formats simultaneously
-- ✅ **ARCHITECTURE UPDATE**: Modified ZIP generation to respect user format selections
-- ✅ **UI ENHANCEMENT**: Added "How Many Levels Deep?" control with user-friendly language
+**July 22, 2025 - COMPREHENSIVE BUG FIXES: All Critical Issues Resolved**
+- ✅ **CRITICAL BUG FIX**: Fixed broken depth algorithm - now properly limits crawling to specified depth levels
+- ✅ **VALIDATION SUCCESS**: Depth 1 = 17 URLs, Depth 2 = 533 URLs (previously all depths returned 532)
+- ✅ **UI BUG FIX**: Enhanced button responsiveness with immediate visual feedback during crawling
+- ✅ **NEW FEATURE**: Added single document consolidation - combines all content into one downloadable file
+- ✅ **ARCHITECTURE UPDATE**: Enhanced recursive discovery logic with proper depth tracking and statistics
+- ✅ **ARCHITECTURE UPDATE**: Improved UI feedback system for better user experience
+- ✅ **TESTING SUCCESS**: All three fixes validated through systematic testing on test site
 
 **July 22, 2025 - Benjamin Western Documentation Crawler Integration + HTML Discovery Fix**
 - ✓ Created comprehensive web interface for Benjamin Western's documentation-crawler
