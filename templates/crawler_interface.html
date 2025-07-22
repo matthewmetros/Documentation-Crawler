@@ -555,38 +555,89 @@
                 console.log('🚀 TRACE: IMMEDIATE UI feedback applied - button changed, progress visible');
                 
                 try {
-                    const formData = this.getFormData();
-                    console.log('📝 TRACE: Configuration received from form:', formData);
-                    console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
+                    // PHASE 1 FIX: Enhanced error isolation around getFormData()
+                    console.log('📋 DIAGNOSTIC: About to call getFormData()');
+                    let formData;
+                    try {
+                        formData = this.getFormData();
+                        console.log('📋 SUCCESS: getFormData() completed successfully');
+                        console.log('📝 TRACE: Configuration received from form:', formData);
+                        console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
+                    } catch (getFormDataError) {
+                        console.error('📋 ERROR: getFormData() failed:', getFormDataError);
+                        throw new Error(`Form data collection failed: ${getFormDataError.message}`);
+                    }
+                    
                     console.log('📝 TRACE: About to send configuration to backend via /api/start-crawling');
 
-                    const response = await fetch('/api/start-crawling', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(formData)
-                    });
+                    // PHASE 1 FIX: Enhanced fetch error handling with detailed logging
+                    console.log('🌐 DIAGNOSTIC: About to send fetch request');
+                    let response;
+                    try {
+                        response = await fetch('/api/start-crawling', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(formData)
+                        });
+                        console.log('🌐 SUCCESS: Fetch request completed, status:', response.status);
+                    } catch (fetchError) {
+                        console.error('🌐 ERROR: Network request failed:', fetchError);
+                        throw new Error(`Network request failed: ${fetchError.message}`);
+                    }
 
-                    const result = await response.json();
-                    console.log('🚀 TRACE: Received response from backend:', result);
+                    console.log('📡 DIAGNOSTIC: About to parse JSON response');
+                    let result;
+                    try {
+                        result = await response.json();
+                        console.log('📡 SUCCESS: JSON parsing completed');
+                        console.log('🚀 TRACE: Received response from backend:', result);
+                    } catch (jsonError) {
+                        console.error('📡 ERROR: JSON parsing failed:', jsonError);
+                        throw new Error(`Response parsing failed: ${jsonError.message}`);
+                    }
                     
                     if (result.success) {
+                        console.log('✅ SUCCESS: Backend confirmed session creation');
                         clearTimeout(timeoutId); // Cancel timeout on success
                         this.currentSessionId = result.session_id;
                         this.socket.emit('join_session', { session_id: this.currentSessionId });
                         this.addLogEntry('Crawling session initialized successfully', 'success');
-                        document.getElementById('session-id').textContent = this.currentSessionId;
+                        
+                        // PHASE 1 FIX: DOM element existence check
+                        const sessionIdElement = document.getElementById('session-id');
+                        if (sessionIdElement) {
+                            sessionIdElement.textContent = this.currentSessionId;
+                            console.log('✅ SUCCESS: Session ID displayed in UI');
+                        } else {
+                            console.warn('⚠️ WARNING: session-id element not found in DOM');
+                        }
+                        
                         console.log('🚀 TRACE: Session started successfully with ID:', this.currentSessionId);
                     } else {
-                        console.log('🚀 TRACE: Session start failed:', result.error);
+                        console.log('❌ BACKEND ERROR: Session start failed:', result.error);
                         throw new Error(result.error || 'Unknown error occurred');
                     }
                 } catch (error) {
-                    console.error('🚀 TRACE: Error starting crawling:', error);
+                    console.error('❌ CRITICAL ERROR: Crawling start failed:', error);
+                    console.error('❌ ERROR STACK:', error.stack);
                     clearTimeout(timeoutId); // Cancel timeout on error
                     resetButton(); // Use consistent reset function
-                    this.addLogEntry(`Failed to start crawling: ${error.message}`, 'error');
+                    
+                    // PHASE 1 FIX: Enhanced user-friendly error messages
+                    let userMessage = 'Failed to start crawling';
+                    if (error.message.includes('Form data collection')) {
+                        userMessage = 'Form validation error - please check your input fields';
+                    } else if (error.message.includes('Network request')) {
+                        userMessage = 'Network connection error - please check your internet connection';
+                    } else if (error.message.includes('Response parsing')) {
+                        userMessage = 'Server response error - please try again';
+                    } else {
+                        userMessage = `Failed to start crawling: ${error.message}`;
+                    }
+                    
+                    this.addLogEntry(userMessage, 'error');
                 }
             }
 

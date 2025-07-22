@@ -249,8 +249,17 @@ def index():
 def start_crawling():
     """Start a new crawling session."""
     try:
+        # PHASE 2 FIX: Enhanced backend logging
+        logger.info("🌐 BACKEND: /api/start-crawling endpoint called")
+        logger.info(f"🌐 BACKEND: Request method: {request.method}")
+        logger.info(f"🌐 BACKEND: Request headers: {dict(request.headers)}")
+        
         data = request.get_json()
+        logger.info(f"🌐 BACKEND: Received request data: {data}")
+        logger.info(f"🌐 BACKEND: Data type: {type(data)}")
+        
         session_id = str(uuid.uuid4())
+        logger.info(f"🌐 BACKEND: Generated session ID: {session_id}")
         
         # Create new crawler session
         crawler_interface = CrawlerWebInterface(session_id, socketio)
