@@ -43,14 +43,35 @@ class URLProcessor:
         url_language = query_params.get('hl', [None])[0]
         logger.debug(f"  Language check: URL language={url_language}, target={language}")
 
+        # Enhanced language detection for path-based routing
         if language == 'en':
-            result = url_language is None
-            logger.debug(f"  English check result: {result}")
-            return result
+            # For English, accept both no language parameter and explicit en
+            if url_language is None:
+                # Check for path-based language routing
+                if f'/{language}/' in parsed_url.path or parsed_url.path.startswith(f'/{language}'):
+                    logger.debug(f"  ✅ English path-based routing detected")
+                    return True
+                elif any(lang in parsed_url.path for lang in ['/fr/', '/de/', '/es/', '/pt/', '/ja/', '/ko/', '/zh/']):
+                    logger.debug(f"  ❌ Non-English path-based routing detected")
+                    return False
+                else:
+                    logger.debug(f"  ✅ Default English (no language indicator)")
+                    return True
+            else:
+                result = url_language == 'en'
+                logger.debug(f"  English query parameter result: {result}")
+                return result
 
-        result = url_language == language
-        logger.debug(f"  Language match result: {result}")
-        return result
+        # For non-English languages, check both query params and path
+        if url_language == language:
+            logger.debug(f"  ✅ Query parameter language match")
+            return True
+        elif f'/{language}/' in parsed_url.path or parsed_url.path.startswith(f'/{language}'):
+            logger.debug(f"  ✅ Path-based language match")
+            return True
+        
+        logger.debug(f"  ❌ No language match found")
+        return False
 
     def find_sitemap_url(self, base_url: str) -> Optional[str]:
         """Try to find sitemap URL from robots.txt or common locations."""
@@ -91,15 +112,25 @@ class URLProcessor:
         except requests.RequestException as e:
             logger.error(f"💥 Error during sitemap discovery: {e}")
         
-        logger.warning(f"🚫 No sitemap found for {base_url}")
-        return None
+        logger.warning(f"🚫 No XML sitemap found for {base_url}")
+        logger.info(f"🔄 Falling back to HTML discovery method")
+        return base_url  # Return base URL for HTML parsing
 
     def parse_sitemap(self, sitemap_url: str) -> List[str]:
-        """Parse XML sitemap and return list of URLs."""
+        """Parse XML sitemap or HTML page and return list of URLs."""
         logger.info(f"📊 Starting sitemap parsing for: {sitemap_url}")
         
+        # Check if this is HTML fallback (base URL) or XML sitemap
+        if sitemap_url.endswith('.xml'):
+            return self._parse_xml_sitemap(sitemap_url)
+        else:
+            logger.info(f"🔄 Using HTML discovery method for: {sitemap_url}")
+            return self.parse_html_sitemap(sitemap_url)
+    
+    def _parse_xml_sitemap(self, sitemap_url: str) -> List[str]:
+        """Parse XML sitemap and return list of URLs."""
         try:
-            logger.info(f"🌐 Fetching sitemap content...")
+            logger.info(f"🌐 Fetching XML sitemap content...")
             response = requests.get(sitemap_url, headers=self.headers, timeout=self.timeout)
             logger.info(f"📡 Sitemap response: {response.status_code}, Content-Type: {response.headers.get('content-type', 'unknown')}")
             logger.info(f"📏 Content length: {len(response.content)} bytes")
@@ -117,7 +148,7 @@ class URLProcessor:
             logger.info(f"🔍 Found {len(loc_elements)} <loc> elements in sitemap")
             
             urls = [loc.text for loc in loc_elements if loc.text]
-            logger.info(f"📋 Extracted {len(urls)} valid URLs from sitemap")
+            logger.info(f"📋 Extracted {len(urls)} valid URLs from XML sitemap")
             
             # Log first few URLs for debugging
             for i, url in enumerate(urls[:5]):
@@ -132,5 +163,104 @@ class URLProcessor:
             logger.error(f"🔧 This might be an HTML page instead of XML sitemap")
             return []
         except Exception as e:
-            logger.error(f"💥 Unexpected error parsing sitemap {sitemap_url}: {e}")
+            logger.error(f"💥 Unexpected error parsing XML sitemap {sitemap_url}: {e}")
             return []
+
+    def parse_html_sitemap(self, html_url: str) -> List[str]:
+        """Parse HTML page to extract documentation links as fallback."""
+        logger.info(f"🌐 Starting HTML discovery for: {html_url}")
+        
+        try:
+            logger.info(f"📄 Fetching HTML content...")
+            response = requests.get(html_url, headers=self.headers, timeout=self.timeout)
+            logger.info(f"📡 HTML response: {response.status_code}, Content-Type: {response.headers.get('content-type', 'unknown')}")
+            
+            if response.status_code != 200:
+                logger.error(f"❌ Failed to fetch HTML: {response.status_code}")
+                return []
+            
+            from bs4 import BeautifulSoup
+            soup = BeautifulSoup(response.content, 'html.parser')
+            logger.info(f"✅ HTML parsing successful")
+            
+            # Extract all links from the page
+            links = soup.find_all('a', href=True)
+            logger.info(f"🔍 Found {len(links)} total links in HTML")
+            
+            # Filter for relevant documentation links
+            doc_urls = []
+            for link in links:
+                href = link.get('href')
+                if href:
+                    # Convert relative URLs to absolute
+                    from urllib.parse import urljoin
+                    absolute_url = urljoin(html_url, href)
+                    
+                    # Basic filtering for documentation-like URLs
+                    if self.is_documentation_link(absolute_url, html_url):
+                        doc_urls.append(absolute_url)
+            
+            # Remove duplicates
+            unique_urls = list(set(doc_urls))
+            logger.info(f"📋 Extracted {len(unique_urls)} unique documentation URLs")
+            
+            # Log first few URLs for debugging
+            for i, url in enumerate(unique_urls[:5]):
+                logger.info(f"  {i+1}. {url}")
+            if len(unique_urls) > 5:
+                logger.info(f"  ... and {len(unique_urls) - 5} more URLs")
+            
+            return unique_urls
+            
+        except Exception as e:
+            logger.error(f"💥 Error parsing HTML sitemap {html_url}: {e}")
+            return []
+    
+    def is_documentation_link(self, url: str, base_url: str) -> bool:
+        """Check if a link appears to be documentation content."""
+        from urllib.parse import urlparse
+        
+        parsed_url = urlparse(url)
+        parsed_base = urlparse(base_url)
+        
+        # Must be same domain
+        if parsed_url.netloc != parsed_base.netloc:
+            return False
+        
+        # Skip common non-documentation patterns
+        skip_patterns = [
+            '/login', '/signup', '/register', '/auth',
+            '/api/', '/admin/', '/account/', '/profile/',
+            'mailto:', 'tel:', 'javascript:',
+            '.pdf', '.doc', '.zip', '.img', '.png', '.jpg', '.gif',
+            '#', '?search=', '/search'
+        ]
+        
+        url_lower = url.lower()
+        for pattern in skip_patterns:
+            if pattern in url_lower:
+                return False
+        
+        # Look for documentation indicators
+        doc_indicators = [
+            '/article', '/articles', '/docs', '/help', '/guide', '/guides',
+            '/documentation', '/tutorial', '/tutorials', '/kb', '/knowledge',
+            '/support', '/faq', '/how-to', '/getting-started'
+        ]
+        
+        for indicator in doc_indicators:
+            if indicator in url_lower:
+                return True
+        
+        # For Intercom-style help centers, check for article patterns
+        if '/en/' in url and any(x in url_lower for x in ['article', 'collection']):
+            return True
+        
+        # If path starts with base path and has content depth
+        path_parts = parsed_url.path.strip('/').split('/')
+        if len(path_parts) >= 2:  # Has some content depth
+            for base_path in self.base_paths:
+                if parsed_url.path.startswith(base_path.rstrip('/')):
+                    return True
+        
+        return False

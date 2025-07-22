@@ -116,14 +116,14 @@ class CrawlerWebInterface:
             logger.info(f"📊 Sitemap discovery complete. Found {len(self.crawler.sitemap)} pages")
             
             if not self.crawler.sitemap:
-                error_msg = f"No pages found in sitemap for {self.config.base_url}"
+                error_msg = f"No pages found for {self.config.base_url}"
                 logger.error(f"❌ {error_msg}")
-                logger.error(f"🔧 Possible causes:")
-                logger.error(f"  - Site doesn't have an XML sitemap")
-                logger.error(f"  - Sitemap is malformed or empty")
-                logger.error(f"  - URL filtering is too restrictive")
-                logger.error(f"  - Site uses dynamic/JavaScript content")
-                self.emit_status(error_msg, "error")
+                logger.error(f"🔧 Troubleshooting steps:")
+                logger.error(f"  1. Verify the URL is a documentation site")
+                logger.error(f"  2. Check if the site requires authentication")
+                logger.error(f"  3. Try a more specific documentation URL")
+                logger.error(f"  4. Ensure language setting matches site content")
+                self.emit_status(f"{error_msg} - Try a more specific documentation URL", "error")
                 self.status = "error"
                 return
                 

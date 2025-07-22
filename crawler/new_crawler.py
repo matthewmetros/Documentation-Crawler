@@ -215,6 +215,13 @@ class DocCrawler:
             logger.error("❌ No sitemap found! Cannot proceed with crawling.")
             logger.error(f"🔧 Consider trying a different URL or checking if {base_url} has documentation")
             return
+        
+        # Detect discovery method being used
+        if sitemap_url.endswith('.xml'):
+            logger.info(f"📄 Using XML sitemap discovery method")
+        else:
+            logger.info(f"🌐 Using HTML discovery method (fallback)")
+            logger.info(f"🔧 This is normal for modern documentation platforms like Intercom, Zendesk, etc.")
 
         try:
             logger.info(f"📊 Parsing main sitemap: {sitemap_url}")
