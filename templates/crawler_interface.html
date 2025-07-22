@@ -519,6 +519,32 @@
                 
                 console.log('✅ VALIDATION PASSED: Proceeding with crawling');
                 
+                // EMERGENCY FIX: Comprehensive synchronous error detection
+                try {
+                    console.log('🔧 EMERGENCY: Starting synchronous error detection');
+                    console.log('🔧 EMERGENCY: this context:', this);
+                    console.log('🔧 EMERGENCY: this.getFormData exists:', typeof this.getFormData);
+                    
+                    // Test DOM element access
+                    const form = document.getElementById('crawler-form');
+                    const urlInput = document.getElementById('url-input');
+                    const depthSelect = document.getElementById('crawl-depth');
+                    console.log('🔧 EMERGENCY: Form element found:', !!form);
+                    console.log('🔧 EMERGENCY: URL input found:', !!urlInput);
+                    console.log('🔧 EMERGENCY: Depth select found:', !!depthSelect);
+                    
+                    // Test getFormData call with error boundary
+                    console.log('🔧 EMERGENCY: About to test getFormData()');
+                    const testConfig = this.getFormData();
+                    console.log('🔧 EMERGENCY: getFormData() SUCCESS:', testConfig);
+                    
+                } catch (emergencyError) {
+                    console.error('🚨 EMERGENCY ERROR CAUGHT:', emergencyError);
+                    console.error('🚨 EMERGENCY STACK:', emergencyError.stack);
+                    this.addLogEntry(`Critical error: ${emergencyError.message}`, 'error');
+                    return; // Stop execution on synchronous error
+                }
+                
                 // STEP 2: NOW make UI changes (only after validation passes)
                 const startBtn = document.getElementById('start-btn');
                 
