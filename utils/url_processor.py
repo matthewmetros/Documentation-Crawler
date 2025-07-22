@@ -168,34 +168,51 @@ class URLProcessor:
 
     def parse_html_sitemap(self, html_url: str, max_depth: int = 2) -> List[str]:
         """Parse HTML page to extract documentation links with recursive discovery."""
-        logger.info(f"🌐 TRACE: parse_html_sitemap() - Entry point with max_depth={max_depth}")
+        logger.info(f"🔧 DEBUG: Starting depth-limited discovery with max_depth={max_depth}")
         logger.info(f"🌐 Starting recursive HTML discovery for: {html_url}")
         logger.info(f"🌐 TRACE: NEW FEATURE - Implementing recursive crawling up to {max_depth} levels!")
         
         discovered_urls = set()
         processed_urls = set()
         url_queue = [(html_url, 0)]  # (url, depth)
+        depth_stats = {}  # Track URLs found per depth
         
         while url_queue:
             current_url, current_depth = url_queue.pop(0)
             
-            if current_url in processed_urls or current_depth >= max_depth:
+            # Track depth statistics
+            if current_depth not in depth_stats:
+                depth_stats[current_depth] = 0
+            depth_stats[current_depth] += 1
+            
+            logger.info(f"🔧 DEBUG: Processing depth {current_depth}/{max_depth}: {current_url[:60]}...")
+            
+            if current_url in processed_urls:
+                logger.debug(f"🔧 DEBUG: Skipping already processed: {current_url[:60]}...")
                 continue
                 
-            logger.info(f"🔍 Processing level {current_depth + 1}: {current_url}")
+            if current_depth >= max_depth:
+                logger.info(f"🔧 DEBUG: Depth limit reached ({current_depth} >= {max_depth}), skipping: {current_url[:60]}...")
+                continue
+                
             processed_urls.add(current_url)
-            
             level_urls = self._extract_links_from_page(current_url)
+            logger.info(f"🔧 DEBUG: Found {len(level_urls)} links at depth {current_depth}")
             
             for url in level_urls:
                 if url not in discovered_urls and url not in processed_urls:
                     discovered_urls.add(url)
+                    # Only queue for next depth if within limits
                     if current_depth + 1 < max_depth:
                         url_queue.append((url, current_depth + 1))
-                        logger.debug(f"📝 Queued for level {current_depth + 2}: {url}")
+                        logger.debug(f"🔧 DEBUG: Queued for depth {current_depth + 1}: {url[:60]}...")
+                    else:
+                        logger.debug(f"🔧 DEBUG: Depth limit prevents queuing: {url[:60]}...")
         
         result_urls = list(discovered_urls)
-        logger.info(f"🎯 Recursive discovery complete: {len(result_urls)} URLs found across {max_depth} levels")
+        logger.info(f"🔧 DEBUG: Depth statistics: {depth_stats}")
+        logger.info(f"🔧 DEBUG: Total discovered: {len(result_urls)} URLs")
+        logger.info(f"🎯 Recursive discovery complete: {len(result_urls)} URLs found with max_depth={max_depth}")
         return result_urls
     
     def _extract_links_from_page(self, html_url: str) -> List[str]:

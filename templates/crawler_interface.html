@@ -350,9 +350,14 @@
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i data-feather="file-text"></i> Crawling Results</h5>
-                        <button class="btn btn-success btn-custom" id="download-btn">
-                            <i data-feather="download"></i> Download ZIP
-                        </button>
+                        <div class="btn-group" role="group">
+                            <button class="btn btn-success btn-custom" id="download-btn">
+                                <i data-feather="download"></i> Download ZIP
+                            </button>
+                            <button class="btn btn-info btn-custom" id="download-single-btn">
+                                <i data-feather="file-text"></i> Download Single Document
+                            </button>
+                        </div>
                     </div>
                 </div>
                 <div class="card-body">
@@ -460,16 +465,40 @@
                 document.getElementById('download-btn').addEventListener('click', () => {
                     this.downloadResults();
                 });
+
+                document.getElementById('download-single-btn').addEventListener('click', () => {
+                    this.downloadSingleDocument();
+                });
             }
 
             async startCrawling() {
                 console.log('🚀 TRACE: startCrawling() - Entry point');
                 
-                // IMMEDIATE UI FEEDBACK - Fix frozen button issue
-                console.log('🚀 TRACE: Updating button state to loading...');
-                this.updateButtons(true);
-                this.addLogEntry('Starting crawling session...', 'info');
-                this.showProgress();
+                // IMMEDIATE visual changes (no async delay)
+                const startBtn = document.getElementById('start-btn');
+                const originalText = startBtn.textContent;
+                
+                // Instant button state change
+                startBtn.textContent = 'Starting...';
+                startBtn.disabled = true;
+                startBtn.classList.add('btn-warning');
+                startBtn.classList.remove('btn-primary');
+                
+                // Instant progress section visibility  
+                document.getElementById('progress-section').style.display = 'block';
+                const progressBar = document.getElementById('progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = '10%';
+                }
+                
+                // Instant status message in main area
+                const statusArea = document.getElementById('status-messages') || document.getElementById('logs');
+                if (statusArea) {
+                    statusArea.innerHTML = '<div class="alert alert-info mb-2">🚀 Initializing crawler...</div>';
+                    statusArea.style.display = 'block';
+                }
+                
+                console.log('🚀 TRACE: IMMEDIATE UI feedback applied - button changed, progress visible');
                 
                 const formData = this.getFormData();
                 console.log('📝 TRACE: Configuration received from form:', formData);
@@ -657,6 +686,37 @@
                 } catch (error) {
                     console.error('Error downloading results:', error);
                     this.addLogEntry(`Download error: ${error.message}`, 'error');
+                }
+            }
+
+            async downloadSingleDocument() {
+                if (!this.currentSessionId) return;
+
+                console.log('📄 TRACE: downloadSingleDocument() - Entry point');
+                console.log('📄 TRACE: Current session ID:', this.currentSessionId);
+                console.log('📄 Downloading single consolidated document');
+                
+                try {
+                    const response = await fetch(`/api/download-single/${this.currentSessionId}`);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `documentation_complete_${new Date().toISOString().slice(0,10)}.md`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        
+                        this.addLogEntry('Single document download started successfully', 'success');
+                    } else {
+                        this.addLogEntry('Failed to download single document', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error downloading single document:', error);
+                    this.addLogEntry(`Single document download error: ${error.message}`, 'error');
                 }
             }
 

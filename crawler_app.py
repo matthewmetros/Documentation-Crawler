@@ -409,6 +409,83 @@ def download_results(session_id):
         logger.error(f"Error downloading results: {e}")
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/download-single/<session_id>')
+def download_single_document(session_id):
+    """Generate single consolidated document from crawled content."""
+    try:
+        logger.info(f"📄 Generating single document for session: {session_id}")
+        
+        # Get crawling results
+        results = get_session_results(session_id)
+        if not results:
+            return jsonify({'error': 'Session not found or no results available'}), 404
+            
+        if not results.get('content'):
+            return jsonify({'error': 'No content found for this session'}), 404
+        
+        # Build consolidated content
+        consolidated_content = []
+        
+        # Header
+        consolidated_content.append("# Complete Documentation\n\n")
+        consolidated_content.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+        consolidated_content.append(f"**Total Pages:** {results['total_pages']}\n")
+        consolidated_content.append(f"**Session ID:** {session_id}\n\n")
+        
+        # Table of Contents
+        consolidated_content.append("## Table of Contents\n\n")
+        for i, (url, content_data) in enumerate(results['content'].items(), 1):
+            title = content_data.get('title', url.split('/')[-1])
+            # Clean title for TOC
+            clean_title = title.replace('#', '').strip()
+            consolidated_content.append(f"{i}. [{clean_title}](#{i})\n")
+        
+        consolidated_content.append("\n---\n\n")
+        
+        # Add all content with proper formatting
+        for i, (url, content_data) in enumerate(results['content'].items(), 1):
+            title = content_data.get('title', url.split('/')[-1])
+            clean_title = title.replace('#', '').strip()
+            
+            # Get content in text format (preferred for consolidation)
+            content_dict = content_data.get('content', {})
+            content = content_dict.get('text', content_dict.get('markdown', content_dict.get('html', '')))
+            
+            consolidated_content.append(f"## {i}. {clean_title}\n\n")
+            consolidated_content.append(f"**Source:** {url}\n\n")
+            if content.strip():
+                consolidated_content.append(f"{content}\n\n")
+            else:
+                consolidated_content.append("*No content available*\n\n")
+            consolidated_content.append("---\n\n")
+        
+        # Add metadata footer
+        consolidated_content.append("## Crawling Metadata\n\n")
+        consolidated_content.append(f"- **Session ID:** {session_id}\n")
+        consolidated_content.append(f"- **Total URLs Processed:** {len(results['content'])}\n")
+        consolidated_content.append(f"- **Errors Encountered:** {len(results.get('errors', []))}\n")
+        if results.get('errors'):
+            consolidated_content.append(f"- **Error Details:** {'; '.join(results['errors'])}\n")
+        
+        final_content = ''.join(consolidated_content)
+        logger.info(f"📄 Generated consolidated document: {len(final_content)} characters")
+        
+        # Create filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"documentation_complete_{timestamp}.md"
+        
+        return Response(
+            final_content,
+            mimetype='text/plain',
+            headers={
+                'Content-Disposition': f'attachment; filename={filename}'
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"Error generating single document: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/sessions')
 def list_sessions():
     """List all active crawling sessions."""
