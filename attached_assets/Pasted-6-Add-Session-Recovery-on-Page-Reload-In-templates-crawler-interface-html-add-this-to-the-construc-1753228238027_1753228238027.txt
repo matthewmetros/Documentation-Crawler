@@ -1,0 +1,88 @@
+6. Add Session Recovery on Page Reload
+In templates/crawler_interface.html, add this to the constructor (after line 320):
+javascript                // Check for active session in localStorage
+                const savedSessionId = localStorage.getItem('active_session_id');
+                if (savedSessionId) {
+                    console.log('🔄 Found saved session ID:', savedSessionId);
+                    this.currentSessionId = savedSessionId;
+                    this.checkSessionStatus();
+                }
+And add these new methods to the class:
+javascript            async checkSessionStatus() {
+                if (!this.currentSessionId) return;
+                
+                try {
+                    const response = await fetch(`/api/results/${this.currentSessionId}`);
+                    if (response.ok) {
+                        const results = await response.json();
+                        if (results.status === 'completed') {
+                            console.log('🔄 Restoring completed session');
+                            this.displayResults(results);
+                            this.onCrawlingComplete();
+                        } else if (results.status === 'crawling') {
+                            console.log('🔄 Rejoining active session');
+                            this.socket.emit('join_session', { session_id: this.currentSessionId });
+                            this.showProgress();
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking session status:', error);
+                    localStorage.removeItem('active_session_id');
+                }
+            }
+            
+            saveSessionId(sessionId) {
+                localStorage.setItem('active_session_id', sessionId);
+            }
+            
+            clearSessionId() {
+                localStorage.removeItem('active_session_id');
+            }
+Update the startCrawling method to save session ID (around line 520):
+javascript                    if (result.success) {
+                        console.log('✅ SUCCESS: Backend confirmed session creation');
+                        clearTimeout(timeoutId);
+                        this.currentSessionId = result.session_id;
+                        this.saveSessionId(result.session_id); // Add this line
+                        this.socket.emit('join_session', { session_id: this.currentSessionId });
+                        // ... rest of the code
+7. Add Download Format Memory
+In templates/crawler_interface.html, update the displayResults method to store format info:
+javascript            displayResults(results) {
+                console.log('📊 DIAGNOSTIC: displayResults() - FUNCTION ENTRY');
+                
+                // Store the original config for download
+                if (this.currentSessionId && active_sessions[this.currentSessionId]) {
+                    this.currentConfig = active_sessions[this.currentSessionId].config;
+                }
+                
+                document.getElementById('total-pages').textContent = results.total_pages || 0;
+                document.getElementById('successful-pages').textContent = Object.keys(results.content || {}).length;
+                document.getElementById('error-count').textContent = (results.errors || []).length;
+                
+                const resultsContainer = document.getElementById('results-container');
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                // Update download buttons based on selected formats
+                const config = this.currentConfig || {};
+                const downloadBtn = document.getElementById('download-btn');
+                const downloadSingleBtn = document.getElementById('download-single-btn');
+                
+                if (downloadBtn) {
+                    const formats = [];
+                    if (config.store_markdown) formats.push('MD');
+                    if (config.store_raw_html) formats.push('HTML');
+                    if (config.store_text) formats.push('TXT');
+                    downloadBtn.innerHTML = `<i data-feather="download"></i> Download ZIP (${formats.join(', ')})`;
+                }
+                
+                if (downloadSingleBtn && config.store_markdown) {
+                    downloadSingleBtn.style.display = 'inline-block';
+                } else if (downloadSingleBtn) {
+                    downloadSingleBtn.style.display = 'none';
+                    downloadSingleBtn.title = 'Single document download requires Markdown format';
+                }
+                
+                feather.replace();
+            }

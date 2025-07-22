@@ -1,0 +1,71 @@
+validateFormData() {
+                console.log('✅ VALIDATION: Starting form validation');
+                
+                // Validate URL
+                const urlInput = document.getElementById('url-input');
+                if (!urlInput || !urlInput.value.trim()) {
+                    return {
+                        valid: false,
+                        error: 'Please enter a valid URL'
+                    };
+                }
+                
+                // Validate URL format
+                try {
+                    new URL(urlInput.value.trim());
+                } catch (e) {
+                    return {
+                        valid: false,
+                        error: 'Please enter a valid URL format (e.g., https://example.com)'
+                    };
+                }
+                
+                // Extract format selections
+                const store_markdown = document.getElementById('store-markdown').checked;
+                const store_raw_html = document.getElementById('store-html').checked;
+                const store_text = document.getElementById('store-text').checked;
+                
+                const selectedFormats = [];
+                if (store_markdown) selectedFormats.push('Markdown');
+                if (store_raw_html) selectedFormats.push('HTML');
+                if (store_text) selectedFormats.push('Text');
+                
+                console.log('✅ VALIDATION: Selected formats:', selectedFormats.join(', ') || 'NONE');
+                
+                if (selectedFormats.length === 0) {
+                    console.error('❌ VALIDATION: No output formats selected');
+                    return {
+                        valid: false,
+                        error: 'Please select at least one output format (Markdown, HTML, or Text)'
+                    };
+                }
+                
+                // Validate numeric inputs
+                const maxWorkers = parseInt(document.getElementById('max-workers').value);
+                const timeout = parseInt(document.getElementById('timeout').value);
+                const crawlDepth = parseInt(document.getElementById('crawl-depth').value);
+                
+                if (isNaN(maxWorkers) || maxWorkers < 1 || maxWorkers > 20) {
+                    return {
+                        valid: false,
+                        error: 'Max Workers must be between 1 and 20'
+                    };
+                }
+                
+                if (isNaN(timeout) || timeout < 5 || timeout > 60) {
+                    return {
+                        valid: false,
+                        error: 'Timeout must be between 5 and 60 seconds'
+                    };
+                }
+                
+                if (isNaN(crawlDepth) || crawlDepth < 1 || crawlDepth > 4) {
+                    return {
+                        valid: false,
+                        error: 'Crawl depth must be between 1 and 4'
+                    };
+                }
+                
+                console.log('✅ VALIDATION: Passed -', selectedFormats.length, 'formats selected');
+                return { valid: true };
+            }

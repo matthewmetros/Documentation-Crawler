@@ -1,0 +1,65 @@
+addLogEntry(message, level = 'info') {
+                const container = document.getElementById('log-container');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${level}`;
+                
+                // Add emoji based on level
+                let emoji = '';
+                switch(level) {
+                    case 'error': emoji = '❌'; break;
+                    case 'warning': emoji = '⚠️'; break;
+                    case 'success': emoji = '✅'; break;
+                    case 'info': emoji = 'ℹ️'; break;
+                    default: emoji = '📝';
+                }
+                
+                entry.innerHTML = `[${timestamp}] ${emoji} ${this.escapeHtml(message)}`;
+                
+                container.appendChild(entry);
+                container.scrollTop = container.scrollHeight;
+                
+                // Also show important messages as alerts
+                if (level === 'error' || level === 'warning') {
+                    this.showAlert(message, level === 'error' ? 'danger' : 'warning');
+                }
+            }
+            
+            escapeHtml(text) {
+                const div = document.createElement('div');
+                div.textContent = text;
+                return div.innerHTML;
+            }
+            
+            showAlert(message, type = 'info') {
+                const alertsContainer = document.getElementById('alerts-container') || this.createAlertsContainer();
+                
+                const alert = document.createElement('div');
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
+                alert.innerHTML = `
+                    ${this.escapeHtml(message)}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                
+                alertsContainer.appendChild(alert);
+                
+                // Auto-dismiss after 10 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 10000);
+            }
+            
+            createAlertsContainer() {
+                const container = document.createElement('div');
+                container.id = 'alerts-container';
+                container.style.position = 'fixed';
+                container.style.top = '20px';
+                container.style.right = '20px';
+                container.style.zIndex = '9999';
+                container.style.maxWidth = '400px';
+                document.body.appendChild(container);
+                return container;
+            }
