@@ -573,7 +573,12 @@
                 }, 30000);
                 
                 // Instant progress section visibility  
-                document.getElementById('progress-section').style.display = 'block';
+                const progressSection = document.getElementById('progress-section');
+                if (progressSection) {
+                    progressSection.style.display = 'block';
+                } else {
+                    console.warn('⚠️ WARNING: progress-section element not found');
+                }
                 const progressBar = document.getElementById('progress-bar');
                 if (progressBar) {
                     progressBar.style.width = '10%';
