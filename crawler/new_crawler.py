@@ -225,7 +225,14 @@ class DocCrawler:
 
         try:
             logger.info(f"📊 Parsing main sitemap: {sitemap_url}")
-            sitemap_urls = self.url_processor.parse_sitemap(sitemap_url)
+            # Pass crawl depth configuration for recursive discovery
+            if sitemap_url.endswith('.xml'):
+                sitemap_urls = self.url_processor.parse_sitemap(sitemap_url)
+            else:
+                # Use recursive HTML discovery with configured depth
+                max_depth = getattr(self.config, 'max_crawl_depth', 2)
+                logger.info(f"🔧 Using recursive discovery with max_depth={max_depth}")
+                sitemap_urls = self.url_processor.parse_html_sitemap(sitemap_url, max_depth)
             logger.info(f"📋 Found {len(sitemap_urls)} potential sitemaps/URLs")
 
             if len(sitemap_urls) == 0:
@@ -355,13 +362,17 @@ class DocCrawler:
         
         logger.info(f"Stored {len(selected_urls)} URLs to {filepath}")
 
-    def get_scraped_content(self, selected_urls: List[str]) -> Dict[str, str]:
-        """Scrape and return content for web interface without saving files."""
+    def get_scraped_content(self, selected_urls: List[str], formats: dict = None) -> Dict[str, dict]:
+        """Scrape and return content for web interface in requested formats."""
+        if formats is None:
+            formats = {'store_markdown': True, 'store_raw_html': False, 'store_text': False}
+            
+        logger.info(f"🔧 TRACE: get_scraped_content() - Processing {len(selected_urls)} URLs with formats: {formats}")
         content = {}
         
         with concurrent.futures.ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
             futures = {
-                executor.submit(self._scrape_single_page, url): url
+                executor.submit(self._scrape_single_page, url, formats): url
                 for url in selected_urls
             }
 
@@ -371,27 +382,69 @@ class DocCrawler:
                     page_content = future.result()
                     if page_content:
                         content[url] = page_content
+                        logger.debug(f"✅ Successfully processed {url} in {len(page_content)} formats")
                 except Exception as e:
                     logger.error(f"Error scraping page: {e}")
 
+        logger.info(f"🔧 TRACE: get_scraped_content() - Completed {len(content)} pages successfully")
         return content
 
-    def _scrape_single_page(self, url: str) -> Optional[str]:
-        """Scrape a single page and return markdown content."""
+    def _scrape_single_page(self, url: str, formats: dict = None) -> dict:
+        """Scrape a single page and return content in requested formats."""
         logger.info(f"🔧 TRACE: _scrape_single_page() - Entry point for {url}")
-        logger.warning(f"🔧 TRACE: FORMAT ISSUE - Only returning Markdown content!")
-        logger.warning(f"🔧 TRACE: HTML and Text formats are not supported here!")
+        
+        if formats is None:
+            formats = {'store_markdown': True, 'store_raw_html': False, 'store_text': False}
+        
+        logger.info(f"🔧 TRACE: NEW FEATURE - Multi-format processing enabled!")
+        logger.info(f"🔧 TRACE: Requested formats: {[k for k, v in formats.items() if v]}")
         
         try:
             response = self.make_request(url)
             logger.info(f"🔧 TRACE: HTTP response received ({len(response.text)} chars)")
             
-            markdown_content = self.converter.convert(response.text)
-            logger.info(f"🔧 TRACE: Converted to Markdown ({len(markdown_content)} chars)")
-            logger.warning(f"🔧 TRACE: Original HTML content DISCARDED - no HTML format support!")
-            logger.warning(f"🔧 TRACE: Plain text extraction NOT PERFORMED - no Text format support!")
+            result = {}
             
-            return markdown_content
+            # Generate Markdown content if requested
+            if formats.get('store_markdown', True):
+                markdown_content = self.converter.convert(response.text)
+                result['markdown'] = markdown_content
+                logger.info(f"🔧 TRACE: Generated Markdown content ({len(markdown_content)} chars)")
+            
+            # Store raw HTML content if requested
+            if formats.get('store_raw_html', False):
+                # Extract main content from HTML
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Try to find main content area
+                main_content = soup.find('main') or soup.find('article') or soup.find('div', class_=['content', 'main-content'])
+                if main_content:
+                    html_content = str(main_content)
+                else:
+                    html_content = response.text
+                    
+                result['html'] = html_content
+                logger.info(f"🔧 TRACE: Generated HTML content ({len(html_content)} chars)")
+            
+            # Generate plain text content if requested
+            if formats.get('store_text', False):
+                import trafilatura
+                text_content = trafilatura.extract(response.text)
+                if text_content:
+                    result['text'] = text_content
+                    logger.info(f"🔧 TRACE: Generated plain text content ({len(text_content)} chars)")
+                else:
+                    # Fallback to basic text extraction
+                    from bs4 import BeautifulSoup
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    text_content = soup.get_text(separator=' ', strip=True)
+                    result['text'] = text_content
+                    logger.info(f"🔧 TRACE: Generated fallback text content ({len(text_content)} chars)")
+            
+            logger.info(f"🔧 TRACE: Multi-format processing complete: {len(result)} formats generated")
+            return result
+            
         except Exception as e:
             logger.error(f"Error scraping {url}: {e}")
-            return None
+            return {}

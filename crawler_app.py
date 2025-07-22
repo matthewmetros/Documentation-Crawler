@@ -152,22 +152,31 @@ class CrawlerWebInterface:
         store_raw_html = config_data.get('store_raw_html', False)
         store_text = config_data.get('store_text', False)
         store_flatten = config_data.get('store_flatten', False)
+        max_crawl_depth = config_data.get('max_crawl_depth', 2)
         
         logger.info("🔧 TRACE: Format options extracted from config:")
         logger.info(f"  - store_markdown: {store_markdown}")
         logger.info(f"  - store_raw_html: {store_raw_html}")
         logger.info(f"  - store_text: {store_text}")
         logger.info(f"  - store_flatten: {store_flatten}")
+        logger.info(f"  - max_crawl_depth: {max_crawl_depth}")
         
-        logger.warning("⚠️ TRACE: CRITICAL ISSUE - Format options are extracted but NOT USED!")
-        logger.warning("⚠️ TRACE: Only Markdown content will be generated regardless of user selection")
+        logger.info("✅ TRACE: NEW FEATURE - Format options will now be utilized!")
+        logger.info("✅ TRACE: Multi-format content generation enabled!")
+        
+        # Create format configuration dictionary
+        formats = {
+            'store_markdown': store_markdown,
+            'store_raw_html': store_raw_html,
+            'store_text': store_text
+        }
         
         total_urls = len(selected_urls)
         processed = 0
         
         self.emit_progress(0, total_urls)
         
-        # Process pages and track progress
+        # Process pages with multi-format support and track progress
         for url in selected_urls:
             if self.stop_requested:
                 self.emit_status("Crawling stopped by user", "warning")
@@ -175,14 +184,23 @@ class CrawlerWebInterface:
                 return
                 
             try:
-                # Get page content
-                content = self.crawler._scrape_single_page(url)
-                if content:
+                # Get page content in multiple formats
+                content_formats = self.crawler._scrape_single_page(url, formats)
+                if content_formats:
+                    # Store content with format support for backward compatibility
+                    # Use markdown as primary content for existing logic
+                    primary_content = content_formats.get('markdown', '')
+                    if not primary_content and content_formats:
+                        # Fallback to first available format
+                        primary_content = list(content_formats.values())[0]
+                    
                     self.scraped_content[url] = {
-                        'content': content,
+                        'content': primary_content,  # Backward compatibility
+                        'formats': content_formats,  # New multi-format storage
                         'title': self.crawler.sitemap.get(url, url),
                         'timestamp': datetime.now().isoformat()
                     }
+                    logger.debug(f"✅ Stored content for {url} in {len(content_formats)} formats")
                     
                 processed += 1
                 self.emit_progress(processed, total_urls)
@@ -313,25 +331,46 @@ def download_results(session_id):
         # Create ZIP file in memory
         zip_buffer = io.BytesIO()
         
-        logger.info("📦 TRACE: Creating ZIP file")
+        logger.info("📦 TRACE: Creating ZIP file with multi-format support")
         
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-            logger.warning("📦 TRACE: CRITICAL ISSUE - Hardcoded to create .md files only!")
-            logger.warning("📦 TRACE: User format preferences are completely ignored here!")
+            logger.info("📦 TRACE: NEW FEATURE - Format-aware file generation enabled!")
+            logger.info(f"📦 TRACE: User format preferences: {config_data}")
             
-            # Add each page as a separate markdown file
+            # Process each page and generate files in requested formats
             for url, page_data in results['content'].items():
-                # Create safe filename from URL
-                filename = url.replace('https://', '').replace('http://', '')
-                filename = filename.replace('/', '_').replace('?', '_').replace('&', '_')
-                filename = f"{filename}.md"
+                # Create safe base filename from URL
+                base_filename = url.replace('https://', '').replace('http://', '')
+                base_filename = base_filename.replace('/', '_').replace('?', '_').replace('&', '_')
                 
-                logger.info(f"📦 TRACE: Adding file to ZIP: {filename}")
-                logger.warning(f"📦 TRACE: File extension hardcoded to .md regardless of user selection!")
+                # Check if we have multi-format content
+                formats_data = page_data.get('formats', {})
+                if not formats_data:
+                    # Fallback to old single-format content
+                    formats_data = {'markdown': page_data.get('content', '')}
                 
-                # Add file to ZIP
-                zip_file.writestr(filename, page_data['content'])
-                logger.info(f"📦 TRACE: Content added for {filename} ({len(page_data['content'])} chars)")
+                # Generate files for each requested format
+                generated_files = []
+                
+                if config_data.get('store_markdown', True) and 'markdown' in formats_data:
+                    md_filename = f"{base_filename}.md"
+                    zip_file.writestr(md_filename, formats_data['markdown'])
+                    generated_files.append(md_filename)
+                    logger.info(f"📦 TRACE: Added Markdown file: {md_filename} ({len(formats_data['markdown'])} chars)")
+                
+                if config_data.get('store_raw_html', False) and 'html' in formats_data:
+                    html_filename = f"{base_filename}.html"
+                    zip_file.writestr(html_filename, formats_data['html'])
+                    generated_files.append(html_filename)
+                    logger.info(f"📦 TRACE: Added HTML file: {html_filename} ({len(formats_data['html'])} chars)")
+                
+                if config_data.get('store_text', False) and 'text' in formats_data:
+                    txt_filename = f"{base_filename}.txt"
+                    zip_file.writestr(txt_filename, formats_data['text'])
+                    generated_files.append(txt_filename)
+                    logger.info(f"📦 TRACE: Added Text file: {txt_filename} ({len(formats_data['text'])} chars)")
+                
+                logger.info(f"📦 TRACE: Generated {len(generated_files)} files for {url}: {generated_files}")
                 
             # Add metadata file
             metadata = {

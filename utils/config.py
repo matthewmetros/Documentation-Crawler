@@ -11,6 +11,7 @@ class CrawlerConfig:
     max_retries: int = 3
     retry_delay: float = 1
     chunk_size: int = 10
+    max_crawl_depth: int = 2
     user_agent: str = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
 
     def __post_init__(self):

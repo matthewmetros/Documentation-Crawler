@@ -249,8 +249,20 @@
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-12">
-                                <h6>Output Options</h6>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="crawl-depth" class="form-label">How Many Levels Deep?</label>
+                                    <select class="form-select" id="crawl-depth">
+                                        <option value="1">Surface only (collections/main pages)</option>
+                                        <option value="2" selected>Standard (2 levels - includes articles)</option>
+                                        <option value="3">Deep (3 levels - comprehensive)</option>
+                                        <option value="4">Very Deep (4 levels - everything)</option>
+                                    </select>
+                                    <div class="form-text">Controls how deep the crawler follows links. Level 2 usually finds all articles.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Output Formats (NEW: Multi-format support!)</h6>
                                 <div class="form-check form-check-inline">
                                     <input class="form-check-input" type="checkbox" id="store-markdown" checked>
                                     <label class="form-check-label" for="store-markdown">Markdown</label>
@@ -520,6 +532,7 @@
                     timeout: parseInt(document.getElementById('timeout').value),
                     max_retries: parseInt(document.getElementById('max-retries').value),
                     chunk_size: parseInt(document.getElementById('chunk-size').value),
+                    max_crawl_depth: parseInt(document.getElementById('crawl-depth')?.value || 2),
                     store_markdown: document.getElementById('store-markdown').checked,
                     store_raw_html: document.getElementById('store-html').checked,
                     store_text: document.getElementById('store-text').checked,

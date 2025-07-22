@@ -166,17 +166,44 @@ class URLProcessor:
             logger.error(f"💥 Unexpected error parsing XML sitemap {sitemap_url}: {e}")
             return []
 
-    def parse_html_sitemap(self, html_url: str) -> List[str]:
-        """Parse HTML page to extract documentation links as fallback."""
-        logger.info(f"🌐 TRACE: parse_html_sitemap() - Entry point")
-        logger.info(f"🌐 Starting HTML discovery for: {html_url}")
-        logger.warning(f"🌐 TRACE: CRITICAL DEPTH ISSUE - Only processing single level!")
-        logger.warning(f"🌐 TRACE: This method will NOT follow discovered links recursively!")
+    def parse_html_sitemap(self, html_url: str, max_depth: int = 2) -> List[str]:
+        """Parse HTML page to extract documentation links with recursive discovery."""
+        logger.info(f"🌐 TRACE: parse_html_sitemap() - Entry point with max_depth={max_depth}")
+        logger.info(f"🌐 Starting recursive HTML discovery for: {html_url}")
+        logger.info(f"🌐 TRACE: NEW FEATURE - Implementing recursive crawling up to {max_depth} levels!")
         
+        discovered_urls = set()
+        processed_urls = set()
+        url_queue = [(html_url, 0)]  # (url, depth)
+        
+        while url_queue:
+            current_url, current_depth = url_queue.pop(0)
+            
+            if current_url in processed_urls or current_depth >= max_depth:
+                continue
+                
+            logger.info(f"🔍 Processing level {current_depth + 1}: {current_url}")
+            processed_urls.add(current_url)
+            
+            level_urls = self._extract_links_from_page(current_url)
+            
+            for url in level_urls:
+                if url not in discovered_urls and url not in processed_urls:
+                    discovered_urls.add(url)
+                    if current_depth + 1 < max_depth:
+                        url_queue.append((url, current_depth + 1))
+                        logger.debug(f"📝 Queued for level {current_depth + 2}: {url}")
+        
+        result_urls = list(discovered_urls)
+        logger.info(f"🎯 Recursive discovery complete: {len(result_urls)} URLs found across {max_depth} levels")
+        return result_urls
+    
+    def _extract_links_from_page(self, html_url: str) -> List[str]:
+        """Extract documentation links from a single HTML page."""
         try:
-            logger.info(f"📄 Fetching HTML content...")
+            logger.debug(f"📄 Fetching HTML content from: {html_url}")
             response = requests.get(html_url, headers=self.headers, timeout=self.timeout)
-            logger.info(f"📡 HTML response: {response.status_code}, Content-Type: {response.headers.get('content-type', 'unknown')}")
+            logger.debug(f"📡 HTML response: {response.status_code}, Content-Type: {response.headers.get('content-type', 'unknown')}")
             
             if response.status_code != 200:
                 logger.error(f"❌ Failed to fetch HTML: {response.status_code}")
@@ -184,11 +211,11 @@ class URLProcessor:
             
             from bs4 import BeautifulSoup
             soup = BeautifulSoup(response.content, 'html.parser')
-            logger.info(f"✅ HTML parsing successful")
+            logger.debug(f"✅ HTML parsing successful")
             
             # Extract all links from the page
             links = soup.find_all('a', href=True)
-            logger.info(f"🔍 Found {len(links)} total links in HTML")
+            logger.debug(f"🔍 Found {len(links)} total links in HTML")
             
             # Filter for relevant documentation links
             doc_urls = []
@@ -205,23 +232,18 @@ class URLProcessor:
             
             # Remove duplicates
             unique_urls = list(set(doc_urls))
-            logger.info(f"📋 Extracted {len(unique_urls)} unique documentation URLs")
-            
-            logger.warning(f"📋 TRACE: DEPTH LIMITATION - These are only FIRST-LEVEL URLs!")
-            logger.warning(f"📋 TRACE: No recursive discovery will be performed on these URLs!")
-            logger.warning(f"📋 TRACE: Missing potentially hundreds of deeper documentation pages!")
+            logger.debug(f"📋 Extracted {len(unique_urls)} unique documentation URLs from current page")
             
             # Log first few URLs for debugging
-            for i, url in enumerate(unique_urls[:5]):
-                logger.info(f"  {i+1}. {url}")
-            if len(unique_urls) > 5:
-                logger.info(f"  ... and {len(unique_urls) - 5} more URLs")
+            for i, url in enumerate(unique_urls[:3]):
+                logger.debug(f"  {i+1}. {url}")
+            if len(unique_urls) > 3:
+                logger.debug(f"  ... and {len(unique_urls) - 3} more URLs")
             
-            logger.info(f"📋 TRACE: parse_html_sitemap() - Returning {len(unique_urls)} URLs (single level only)")
             return unique_urls
             
         except Exception as e:
-            logger.error(f"💥 Error parsing HTML sitemap {html_url}: {e}")
+            logger.error(f"💥 Error extracting links from {html_url}: {e}")
             return []
     
     def is_documentation_link(self, url: str, base_url: str) -> bool:
