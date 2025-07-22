@@ -4,19 +4,28 @@
 
 class DocumentationScraper {
     constructor() {
+        console.log('🚀 DocumentationScraper: Initializing application');
         this.currentScrapingSession = null;
         this.scrapedContent = null;
         this.settings = this.loadSettings();
+        console.log('📊 DocumentationScraper: Settings loaded', this.settings);
         
         this.init();
+        console.log('✅ DocumentationScraper: Initialization complete');
     }
     
     init() {
+        console.log('🔧 DocumentationScraper: Starting initialization sequence');
         this.initializeEventListeners();
+        console.log('🎯 DocumentationScraper: Event listeners initialized');
         this.initializeTabs();
+        console.log('📑 DocumentationScraper: Tabs initialized');
         this.loadHistory();
+        console.log('📚 DocumentationScraper: History loaded');
         this.loadSettings();
+        console.log('⚙️ DocumentationScraper: Settings reloaded');
         this.checkGoogleDocsAuth();
+        console.log('🔐 DocumentationScraper: Google Docs auth check initiated');
     }
     
     initializeEventListeners() {
@@ -117,6 +126,7 @@ class DocumentationScraper {
     }
     
     async startScraping() {
+        console.log('🌐 DocumentationScraper: Starting scraping process');
         const form = document.getElementById('scraper-form');
         const formData = new FormData(form);
         
@@ -128,13 +138,17 @@ class DocumentationScraper {
             single_page: document.getElementById('single-page-check').checked
         };
         
+        console.log('📝 DocumentationScraper: Scraping configuration', scrapingData);
+        
         // Validate input
         if (!scrapingData.url) {
+            console.warn('⚠️ DocumentationScraper: No URL provided');
             this.showAlert('Please enter a valid URL', 'danger');
             return;
         }
         
         try {
+            console.log('🚀 DocumentationScraper: Sending scraping request to backend');
             this.showProgress('Initializing scraper...');
             this.setFormLoading(true);
             
@@ -147,26 +161,43 @@ class DocumentationScraper {
                 body: JSON.stringify(scrapingData)
             });
             
+            console.log('📡 DocumentationScraper: Received response from backend', {
+                status: response.status,
+                statusText: response.statusText,
+                ok: response.ok
+            });
+            
             if (!response.ok) {
                 const error = await response.json();
+                console.error('❌ DocumentationScraper: Backend returned error', error);
                 throw new Error(error.error || 'Scraping failed');
             }
             
             const result = await response.json();
+            console.log('📊 DocumentationScraper: Scraping result received', {
+                success: result.success,
+                pages_scraped: result.pages_scraped,
+                content_length: result.content?.length || 0
+            });
             
             if (result.success) {
                 this.scrapedContent = result.content;
+                console.log('💾 DocumentationScraper: Content stored in memory');
                 this.displayResults(result);
+                console.log('🖼️ DocumentationScraper: Results displayed to user');
                 this.saveToHistory(scrapingData, result);
+                console.log('📚 DocumentationScraper: Results saved to history');
                 this.showAlert(`Successfully scraped ${result.pages_scraped} pages!`, 'success');
             } else {
+                console.error('❌ DocumentationScraper: Backend reported failure');
                 throw new Error('Scraping failed');
             }
             
         } catch (error) {
-            console.error('Scraping error:', error);
+            console.error('💥 DocumentationScraper: Scraping error occurred', error);
             this.showAlert(`Scraping failed: ${error.message}`, 'danger');
         } finally {
+            console.log('🔄 DocumentationScraper: Cleaning up scraping process');
             this.hideProgress();
             this.setFormLoading(false);
         }

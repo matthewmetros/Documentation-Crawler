@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Benjamin Western Documentation Crawler - Web Interface</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --border-radius: 8px;
+            --box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), #0056b3);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 300;
+        }
+
+        .header p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+        }
+
+        .card {
+            border: none;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            background-color: #fff;
+            border-bottom: 2px solid #e9ecef;
+            font-weight: 600;
+            padding: 1rem 1.5rem;
+        }
+
+        .progress-container {
+            background: white;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin: 1rem 0;
+            box-shadow: var(--box-shadow);
+            display: none;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #ffffff;
+            border-radius: var(--border-radius);
+            padding: 1rem;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 1rem 0;
+        }
+
+        .log-entry {
+            padding: 0.25rem 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .log-entry.info { color: #61dafb; }
+        .log-entry.warning { color: #ffc107; }
+        .log-entry.error { color: #dc3545; }
+        .log-entry.success { color: #28a745; }
+
+        .crawler-controls {
+            display: flex;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .session-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-idle { background: #e9ecef; color: #6c757d; }
+        .status-initializing { background: #cce5ff; color: #0066cc; }
+        .status-discovering { background: #fff3cd; color: #856404; }
+        .status-crawling { background: #d1ecf1; color: #0c5460; }
+        .status-completed { background: #d4edda; color: #155724; }
+        .status-error { background: #f8d7da; color: #721c24; }
+        .status-stopped { background: #f0f0f0; color: #495057; }
+
+        .results-container {
+            display: none;
+        }
+
+        .url-preview {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: var(--border-radius);
+            padding: 0.75rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            margin: 0.5rem 0;
+        }
+
+        .page-count {
+            background: var(--primary-color);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .advanced-options {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: var(--border-radius);
+            padding: 1.5rem;
+            margin: 1rem 0;
+        }
+
+        .btn-custom {
+            border-radius: 25px;
+            padding: 0.5rem 1.5rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-custom:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .crawling-indicator {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i data-feather="download-cloud"></i> Documentation Crawler</h1>
+                    <p>Intelligent documentation scraping with Benjamin Western's crawler engine</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <span class="session-status status-idle" id="connection-status">Connecting...</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Configuration Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="settings"></i> Crawler Configuration</h5>
+            </div>
+            <div class="card-body">
+                <form id="crawler-form">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="url-input" class="form-label">Documentation URL</label>
+                                <input type="url" class="form-control" id="url-input" 
+                                       placeholder="https://docs.example.com" required>
+                                <div class="form-text">Enter the base URL of the documentation site</div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="language-select" class="form-label">Language</label>
+                                <select class="form-select" id="language-select">
+                                    <option value="en" selected>English</option>
+                                    <option value="fr">French (Français)</option>
+                                    <option value="de">German (Deutsch)</option>
+                                    <option value="es">Spanish (Español)</option>
+                                    <option value="pt-BR">Portuguese (Português)</option>
+                                    <option value="ja">Japanese (日本語)</option>
+                                    <option value="ko">Korean (한국어)</option>
+                                    <option value="zh-CN">Chinese (中文)</option>
+                                    <option value="it">Italian (Italiano)</option>
+                                    <option value="id">Indonesian (Bahasa Indonesia)</option>
+                                    <option value="es-419">Spanish - Latin America</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced Options -->
+                    <div class="advanced-options">
+                        <h6><i data-feather="sliders"></i> Advanced Configuration</h6>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="max-workers" class="form-label">Max Workers</label>
+                                    <input type="number" class="form-control" id="max-workers" value="5" min="1" max="20">
+                                    <div class="form-text">Parallel processing threads</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="timeout" class="form-label">Timeout (seconds)</label>
+                                    <input type="number" class="form-control" id="timeout" value="10" min="5" max="60">
+                                    <div class="form-text">Request timeout</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="max-retries" class="form-label">Max Retries</label>
+                                    <input type="number" class="form-control" id="max-retries" value="3" min="0" max="10">
+                                    <div class="form-text">Retry failed requests</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-3">
+                                    <label for="chunk-size" class="form-label">Chunk Size</label>
+                                    <input type="number" class="form-control" id="chunk-size" value="3" min="1" max="10">
+                                    <div class="form-text">URLs per processing batch</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6>Output Options</h6>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="store-markdown" checked>
+                                    <label class="form-check-label" for="store-markdown">Markdown</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="store-html">
+                                    <label class="form-check-label" for="store-html">Raw HTML</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="store-text">
+                                    <label class="form-check-label" for="store-text">Plain Text</label>
+                                </div>
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="checkbox" id="debug-mode">
+                                    <label class="form-check-label" for="debug-mode">Debug Mode</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="crawler-controls">
+                        <button type="submit" class="btn btn-primary btn-custom" id="start-btn">
+                            <i data-feather="play"></i> Start Crawling
+                        </button>
+                        <button type="button" class="btn btn-warning btn-custom" id="stop-btn" disabled>
+                            <i data-feather="square"></i> Stop Crawling
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-custom" id="clear-btn">
+                            <i data-feather="refresh-cw"></i> Clear Form
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Progress Section -->
+        <div class="progress-container" id="progress-container">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0"><i data-feather="activity"></i> Crawling Progress</h5>
+                <span class="session-status" id="crawler-status">Initializing...</span>
+            </div>
+            
+            <div class="progress mb-3" style="height: 10px;">
+                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                     id="progress-bar" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Pages Processed</h6>
+                        <span class="h4" id="progress-current">0</span> / <span class="h4" id="progress-total">0</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Current Status</h6>
+                        <span id="current-status">Ready to start</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="text-center">
+                        <h6>Session ID</h6>
+                        <code id="session-id">Not started</code>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Real-time Logs -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="terminal"></i> Real-time Logs</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="log-container" id="log-container">
+                    <div class="log-entry info">Crawler interface ready. Configure settings and click "Start Crawling" to begin.</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-container" id="results-container">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i data-feather="file-text"></i> Crawling Results</h5>
+                        <button class="btn btn-success btn-custom" id="download-btn">
+                            <i data-feather="download"></i> Download ZIP
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Total Pages</h6>
+                                <span class="page-count" id="total-pages">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Successfully Crawled</h6>
+                                <span class="page-count" id="successful-pages">0</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="text-center">
+                                <h6>Errors</h6>
+                                <span class="page-count" id="error-count">0</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="results-content">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Sessions -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i data-feather="layers"></i> Active Sessions</h5>
+            </div>
+            <div class="card-body">
+                <div id="sessions-list">
+                    <p class="text-muted">No active crawling sessions</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons@4.28.0/dist/feather.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Initialize Feather icons
+        feather.replace();
+
+        class CrawlerInterface {
+            constructor() {
+                this.socket = null;
+                this.currentSessionId = null;
+                this.isConnected = false;
+                
+                this.initializeSocketIO();
+                this.initializeEventListeners();
+                this.loadSessions();
+            }
+
+            initializeSocketIO() {
+                console.log('🔌 Initializing Socket.IO connection');
+                this.socket = io();
+
+                this.socket.on('connect', () => {
+                    console.log('✅ Connected to server');
+                    this.isConnected = true;
+                    this.updateConnectionStatus('Connected', 'success');
+                });
+
+                this.socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
+                    this.isConnected = false;
+                    this.updateConnectionStatus('Disconnected', 'error');
+                });
+
+                this.socket.on('crawler_status', (data) => {
+                    this.handleStatusUpdate(data);
+                });
+
+                this.socket.on('crawler_progress', (data) => {
+                    this.handleProgressUpdate(data);
+                });
+            }
+
+            initializeEventListeners() {
+                console.log('🎯 Setting up event listeners');
+                
+                document.getElementById('crawler-form').addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    this.startCrawling();
+                });
+
+                document.getElementById('stop-btn').addEventListener('click', () => {
+                    this.stopCrawling();
+                });
+
+                document.getElementById('clear-btn').addEventListener('click', () => {
+                    this.clearForm();
+                });
+
+                document.getElementById('download-btn').addEventListener('click', () => {
+                    this.downloadResults();
+                });
+            }
+
+            async startCrawling() {
+                console.log('🚀 Starting crawling process');
+                
+                const formData = this.getFormData();
+                console.log('📝 Configuration:', formData);
+
+                try {
+                    const response = await fetch('/api/start-crawling', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.currentSessionId = result.session_id;
+                        this.socket.emit('join_session', { session_id: this.currentSessionId });
+                        
+                        this.addLogEntry('Crawling session started successfully', 'success');
+                        this.showProgress();
+                        this.updateButtons(true);
+                        
+                        document.getElementById('session-id').textContent = this.currentSessionId;
+                    } else {
+                        this.addLogEntry(`Failed to start crawling: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error starting crawling:', error);
+                    this.addLogEntry(`Error starting crawling: ${error.message}`, 'error');
+                }
+            }
+
+            async stopCrawling() {
+                if (!this.currentSessionId) return;
+
+                console.log('⏹️ Stopping crawling process');
+                
+                try {
+                    const response = await fetch(`/api/stop-crawling/${this.currentSessionId}`, {
+                        method: 'POST'
+                    });
+
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        this.addLogEntry('Stop request sent to crawler', 'warning');
+                    } else {
+                        this.addLogEntry(`Failed to stop crawling: ${result.error}`, 'error');
+                    }
+                } catch (error) {
+                    console.error('Error stopping crawling:', error);
+                    this.addLogEntry(`Error stopping crawling: ${error.message}`, 'error');
+                }
+            }
+
+            getFormData() {
+                return {
+                    url: document.getElementById('url-input').value,
+                    language: document.getElementById('language-select').value,
+                    max_workers: parseInt(document.getElementById('max-workers').value),
+                    timeout: parseInt(document.getElementById('timeout').value),
+                    max_retries: parseInt(document.getElementById('max-retries').value),
+                    chunk_size: parseInt(document.getElementById('chunk-size').value),
+                    store_markdown: document.getElementById('store-markdown').checked,
+                    store_raw_html: document.getElementById('store-html').checked,
+                    store_text: document.getElementById('store-text').checked,
+                    debug: document.getElementById('debug-mode').checked
+                };
+            }
+
+            handleStatusUpdate(data) {
+                console.log('📊 Status update:', data);
+                
+                this.addLogEntry(`[${data.level.toUpperCase()}] ${data.message}`, data.level);
+                this.updateCrawlerStatus(data.status);
+                document.getElementById('current-status').textContent = data.message;
+                
+                // Check if crawling is complete
+                if (data.status === 'completed') {
+                    this.onCrawlingComplete();
+                } else if (data.status === 'error' || data.status === 'stopped') {
+                    this.onCrawlingFinished();
+                }
+            }
+
+            handleProgressUpdate(data) {
+                console.log('📈 Progress update:', data);
+                
+                const progressBar = document.getElementById('progress-bar');
+                const currentSpan = document.getElementById('progress-current');
+                const totalSpan = document.getElementById('progress-total');
+                
+                progressBar.style.width = `${data.percent}%`;
+                progressBar.setAttribute('aria-valuenow', data.percent);
+                
+                currentSpan.textContent = data.current;
+                totalSpan.textContent = data.total;
+            }
+
+            async onCrawlingComplete() {
+                console.log('✅ Crawling completed');
+                this.updateButtons(false);
+                await this.loadResults();
+            }
+
+            onCrawlingFinished() {
+                console.log('🔄 Crawling finished (stopped or error)');
+                this.updateButtons(false);
+            }
+
+            async loadResults() {
+                if (!this.currentSessionId) return;
+
+                try {
+                    const response = await fetch(`/api/results/${this.currentSessionId}`);
+                    const results = await response.json();
+                    
+                    this.displayResults(results);
+                } catch (error) {
+                    console.error('Error loading results:', error);
+                    this.addLogEntry(`Error loading results: ${error.message}`, 'error');
+                }
+            }
+
+            displayResults(results) {
+                console.log('📊 Displaying results:', results);
+                
+                document.getElementById('total-pages').textContent = results.total_pages || 0;
+                document.getElementById('successful-pages').textContent = Object.keys(results.content || {}).length;
+                document.getElementById('error-count').textContent = (results.errors || []).length;
+                
+                document.getElementById('results-container').style.display = 'block';
+                document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
+            }
+
+            async downloadResults() {
+                if (!this.currentSessionId) return;
+
+                console.log('💾 Downloading results');
+                
+                try {
+                    const response = await fetch(`/api/download/${this.currentSessionId}`);
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.style.display = 'none';
+                        a.href = url;
+                        a.download = `documentation_crawl_${new Date().toISOString().slice(0,10)}.zip`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        
+                        this.addLogEntry('Download started successfully', 'success');
+                    } else {
+                        this.addLogEntry('Failed to download results', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error downloading results:', error);
+                    this.addLogEntry(`Download error: ${error.message}`, 'error');
+                }
+            }
+
+            async loadSessions() {
+                try {
+                    const response = await fetch('/api/sessions');
+                    const data = await response.json();
+                    
+                    this.displaySessions(data.sessions || {});
+                } catch (error) {
+                    console.error('Error loading sessions:', error);
+                }
+            }
+
+            displaySessions(sessions) {
+                const container = document.getElementById('sessions-list');
+                
+                if (Object.keys(sessions).length === 0) {
+                    container.innerHTML = '<p class="text-muted">No active crawling sessions</p>';
+                    return;
+                }
+
+                let html = '';
+                for (const [sessionId, session] of Object.entries(sessions)) {
+                    html += `
+                        <div class="session-item mb-2 p-2 border rounded">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>${session.url}</strong>
+                                    <span class="session-status status-${session.status}">${session.status}</span>
+                                </div>
+                                <div>
+                                    <small>${session.progress}/${session.total_pages} pages</small>
+                                    <code class="ms-2">${sessionId.slice(0, 8)}...</code>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                container.innerHTML = html;
+            }
+
+            updateConnectionStatus(status, type) {
+                const statusEl = document.getElementById('connection-status');
+                statusEl.textContent = status;
+                statusEl.className = `session-status status-${type}`;
+            }
+
+            updateCrawlerStatus(status) {
+                const statusEl = document.getElementById('crawler-status');
+                statusEl.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                statusEl.className = `session-status status-${status}`;
+                
+                // Add crawling indicator
+                const progressContainer = document.getElementById('progress-container');
+                if (status === 'crawling') {
+                    progressContainer.classList.add('crawling-indicator');
+                } else {
+                    progressContainer.classList.remove('crawling-indicator');
+                }
+            }
+
+            showProgress() {
+                document.getElementById('progress-container').style.display = 'block';
+            }
+
+            updateButtons(crawling) {
+                document.getElementById('start-btn').disabled = crawling;
+                document.getElementById('stop-btn').disabled = !crawling;
+                
+                if (crawling) {
+                    document.getElementById('start-btn').innerHTML = '<i data-feather="loader"></i> Crawling...';
+                } else {
+                    document.getElementById('start-btn').innerHTML = '<i data-feather="play"></i> Start Crawling';
+                }
+                feather.replace();
+            }
+
+            clearForm() {
+                document.getElementById('crawler-form').reset();
+                document.getElementById('progress-container').style.display = 'none';
+                document.getElementById('results-container').style.display = 'none';
+                this.currentSessionId = null;
+                this.addLogEntry('Form cleared and reset', 'info');
+            }
+
+            addLogEntry(message, level = 'info') {
+                const container = document.getElementById('log-container');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const entry = document.createElement('div');
+                entry.className = `log-entry ${level}`;
+                entry.innerHTML = `[${timestamp}] ${message}`;
+                
+                container.appendChild(entry);
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Initialize the interface when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Initializing Crawler Interface');
+            window.crawlerInterface = new CrawlerInterface();
+        });
+    </script>
+</body>
+</html>

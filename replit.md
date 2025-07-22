@@ -12,7 +12,19 @@ This is a comprehensive Python web application for scraping documentation websit
 
 ## Recent Changes
 
-**July 22, 2025 - User Interface Improvements**
+**July 22, 2025 - Benjamin Western Documentation Crawler Integration**
+- ✓ Created comprehensive web interface for Benjamin Western's documentation-crawler
+- ✓ Implemented Flask-SocketIO for real-time progress tracking and status updates
+- ✓ Added advanced crawler configuration options (workers, timeouts, retry logic, chunk sizes)
+- ✓ Built complete utility module infrastructure (config, display, URL processing, logging)
+- ✓ Created HTML to Markdown converter with proper content cleaning
+- ✓ Implemented session management with unique identifiers for multiple crawling operations
+- ✓ Added ZIP download functionality for crawled documentation with metadata
+- ✓ Integrated 11+ language support for international documentation sites
+- ✓ Created responsive web interface with real-time logs and progress visualization
+- ✓ Added comprehensive deployment guide and API documentation
+
+**Previous Changes - July 22, 2025 - User Interface Improvements**
 - ✓ Updated terminology throughout interface to use simpler, more accessible language
 - ✓ Changed "Max Depth" to "How Many Levels Deep?" with explanatory tooltips and help text
 - ✓ Added comprehensive FAQ section covering tool usage, limits, target audience, and NotebookLM integration
