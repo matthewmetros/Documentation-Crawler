@@ -416,6 +416,14 @@
                 this.currentSessionId = null;
                 this.isConnected = false;
                 
+                // PHASE 2 FIX: Global unhandled rejection handler for debugging
+                window.addEventListener('unhandledrejection', (event) => {
+                    console.error('🚨 UNHANDLED REJECTION CAUGHT:', event.reason);
+                    console.error('🚨 PROMISE:', event.promise);
+                    console.error('🚨 STACK:', event.reason?.stack);
+                    // Don't prevent default to see full error details
+                });
+                
                 this.initializeSocketIO();
                 this.initializeEventListeners();
                 this.loadSessions();
@@ -555,11 +563,16 @@
                 console.log('🚀 TRACE: IMMEDIATE UI feedback applied - button changed, progress visible');
                 
                 try {
-                    // PHASE 1 FIX: Enhanced error isolation around getFormData()
+                    // PHASE 2 FIX: Debug execution flow before getFormData()
                     console.log('📋 DIAGNOSTIC: About to call getFormData()');
+                    console.log('📋 DIAGNOSTIC: this object:', this);
+                    console.log('📋 DIAGNOSTIC: typeof this.getFormData:', typeof this.getFormData);
+                    
                     let formData;
                     try {
+                        console.log('📋 DIAGNOSTIC: Calling this.getFormData() now...');
                         formData = this.getFormData();
+                        console.log('📋 DIAGNOSTIC: getFormData() call completed, result:', formData);
                         console.log('📋 SUCCESS: getFormData() completed successfully');
                         console.log('📝 TRACE: Configuration received from form:', formData);
                         console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
