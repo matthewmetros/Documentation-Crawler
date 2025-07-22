@@ -12,7 +12,7 @@ This is a comprehensive Python web application for scraping documentation websit
 
 ## Recent Changes
 
-**July 22, 2025 - Benjamin Western Documentation Crawler Integration**
+**July 22, 2025 - Benjamin Western Documentation Crawler Integration + HTML Discovery Fix**
 - ✓ Created comprehensive web interface for Benjamin Western's documentation-crawler
 - ✓ Implemented Flask-SocketIO for real-time progress tracking and status updates
 - ✓ Added advanced crawler configuration options (workers, timeouts, retry logic, chunk sizes)
@@ -23,6 +23,11 @@ This is a comprehensive Python web application for scraping documentation websit
 - ✓ Integrated 11+ language support for international documentation sites
 - ✓ Created responsive web interface with real-time logs and progress visualization
 - ✓ Added comprehensive deployment guide and API documentation
+- ✓ **FIXED CRITICAL BUG**: Implemented HTML discovery fallback for modern documentation platforms
+- ✓ **SUCCESS**: Now supports Intercom, Zendesk, GitBook and other platforms without XML sitemaps
+- ✓ Enhanced language detection for both path-based (/en/) and query-based (?hl=en) routing
+- ✓ Added intelligent documentation link filtering with platform-specific patterns
+- ✓ Validated fix with successful crawling of https://help.hospitable.com/en/ (18 pages discovered)
 
 **Previous Changes - July 22, 2025 - User Interface Improvements**
 - ✓ Updated terminology throughout interface to use simpler, more accessible language
