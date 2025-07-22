@@ -108,7 +108,7 @@
         .status-error { background: #f8d7da; color: #721c24; }
         .status-stopped { background: #f0f0f0; color: #495057; }
 
-        .results-container {
+        .results-container.hidden {
             display: none;
         }
 
@@ -345,7 +345,7 @@
         </div>
 
         <!-- Results Section -->
-        <div class="results-container" id="results-container">
+        <div class="results-container hidden" id="results-container">
             <div class="card">
                 <div class="card-header">
                     <div class="d-flex justify-content-between align-items-center">
@@ -476,13 +476,30 @@
                 
                 // IMMEDIATE visual changes (no async delay)
                 const startBtn = document.getElementById('start-btn');
-                const originalText = startBtn.textContent;
+                
+                // PHASE 2: BUTTON STATE RECOVERY - Create reset function
+                const resetButton = () => {
+                    startBtn.textContent = 'Start Crawling';
+                    startBtn.disabled = false;
+                    startBtn.classList.remove('btn-warning');
+                    startBtn.classList.add('btn-primary');
+                    console.log('🔄 RESET: Button state reset to normal');
+                };
                 
                 // Instant button state change
                 startBtn.textContent = 'Starting...';
                 startBtn.disabled = true;
                 startBtn.classList.add('btn-warning');
                 startBtn.classList.remove('btn-primary');
+                
+                // PHASE 2: TIMEOUT RECOVERY - 30-second fallback
+                const timeoutId = setTimeout(() => {
+                    if (startBtn.textContent === 'Starting...') {
+                        console.warn('🚨 TIMEOUT: Start button stuck - auto-recovering');
+                        resetButton();
+                        this.addLogEntry('Start timeout - please try again', 'warning');
+                    }
+                }, 30000);
                 
                 // Instant progress section visibility  
                 document.getElementById('progress-section').style.display = 'block';
@@ -500,12 +517,12 @@
                 
                 console.log('🚀 TRACE: IMMEDIATE UI feedback applied - button changed, progress visible');
                 
-                const formData = this.getFormData();
-                console.log('📝 TRACE: Configuration received from form:', formData);
-                console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
-                console.log('📝 TRACE: About to send configuration to backend via /api/start-crawling');
-
                 try {
+                    const formData = this.getFormData();
+                    console.log('📝 TRACE: Configuration received from form:', formData);
+                    console.log('📝 TRACE: DEPTH SETTING - Sending max_crawl_depth:', formData.max_crawl_depth);
+                    console.log('📝 TRACE: About to send configuration to backend via /api/start-crawling');
+
                     const response = await fetch('/api/start-crawling', {
                         method: 'POST',
                         headers: {
@@ -518,6 +535,7 @@
                     console.log('🚀 TRACE: Received response from backend:', result);
                     
                     if (result.success) {
+                        clearTimeout(timeoutId); // Cancel timeout on success
                         this.currentSessionId = result.session_id;
                         this.socket.emit('join_session', { session_id: this.currentSessionId });
                         this.addLogEntry('Crawling session initialized successfully', 'success');
@@ -529,8 +547,8 @@
                     }
                 } catch (error) {
                     console.error('🚀 TRACE: Error starting crawling:', error);
-                    // ONLY reset button state on error
-                    this.updateButtons(false);
+                    clearTimeout(timeoutId); // Cancel timeout on error
+                    resetButton(); // Use consistent reset function
                     this.addLogEntry(`Failed to start crawling: ${error.message}`, 'error');
                 }
             }
@@ -581,19 +599,30 @@
                 console.log('  - store_raw_html:', formData.store_raw_html);
                 console.log('  - store_text:', formData.store_text);
                 
+                // PHASE 1: FORMAT VALIDATION - Prevent submission with no formats
                 const selectedFormats = [];
                 if (formData.store_markdown) selectedFormats.push('Markdown');
                 if (formData.store_raw_html) selectedFormats.push('HTML');
                 if (formData.store_text) selectedFormats.push('Text');
                 
                 console.log('📋 TRACE: Selected output formats:', selectedFormats.join(', ') || 'NONE');
+                
+                if (selectedFormats.length === 0) {
+                    console.error('📋 VALIDATION ERROR: No output formats selected');
+                    throw new Error('Please select at least one output format (Markdown, HTML, or Text)');
+                }
+                
+                console.log('📋 TRACE: Format validation passed -', selectedFormats.length, 'formats selected');
                 console.log('📋 TRACE: getFormData() - Completed');
                 
                 return formData;
             }
 
             handleStatusUpdate(data) {
-                console.log('📊 Status update:', data);
+                console.log('📊 DIAGNOSTIC: handleStatusUpdate() - ENTRY');
+                console.log('📊 DIAGNOSTIC: Status update data:', data);
+                console.log('📊 DIAGNOSTIC: Status value:', data.status);
+                console.log('📊 DIAGNOSTIC: Current session ID:', this.currentSessionId);
                 
                 this.addLogEntry(`[${data.level.toUpperCase()}] ${data.message}`, data.level);
                 this.updateCrawlerStatus(data.status);
@@ -601,10 +630,16 @@
                 
                 // Check if crawling is complete
                 if (data.status === 'completed') {
+                    console.log('📊 DIAGNOSTIC: Status is COMPLETED - calling onCrawlingComplete()');
                     this.onCrawlingComplete();
                 } else if (data.status === 'error' || data.status === 'stopped') {
+                    console.log('📊 DIAGNOSTIC: Status is ERROR/STOPPED - calling onCrawlingFinished()');
                     this.onCrawlingFinished();
+                } else {
+                    console.log('📊 DIAGNOSTIC: Status is other:', data.status);
                 }
+                
+                console.log('📊 DIAGNOSTIC: handleStatusUpdate() - EXIT');
             }
 
             handleProgressUpdate(data) {
@@ -626,28 +661,76 @@
                 console.log('✅ TRACE: Crawling completed, updating UI');
                 this.updateButtons(false);
                 console.log('✅ TRACE: Buttons updated, loading results');
-                await this.loadResults();
-                console.log('✅ TRACE: Results loaded, checking results container visibility');
                 
-                const resultsContainer = document.getElementById('results-container');
-                if (resultsContainer) {
-                    console.log('✅ TRACE: Results container found, display style:', resultsContainer.style.display);
-                    console.log('✅ TRACE: Results container visible:', resultsContainer.offsetHeight > 0);
-                } else {
-                    console.error('✅ ERROR: Results container not found in DOM');
+                // PHASE 3: RESULTS DISPLAY RELIABILITY - Retry mechanism
+                let retries = 3;
+                while (retries > 0) {
+                    try {
+                        await this.loadResults();
+                        break;
+                    } catch (error) {
+                        retries--;
+                        console.warn(`⚠️ RETRY: Result loading failed, ${retries} attempts remaining:`, error.message);
+                        if (retries === 0) {
+                            console.error('❌ FAILED: All result loading attempts exhausted');
+                            this.addLogEntry('Error loading results after multiple attempts', 'error');
+                            return;
+                        }
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
                 }
                 
-                const downloadBtn = document.getElementById('download-btn');
-                const downloadSingleBtn = document.getElementById('download-single-btn');
-                console.log('✅ TRACE: Download ZIP button found:', !!downloadBtn);
-                console.log('✅ TRACE: Download Single button found:', !!downloadSingleBtn);
+                console.log('✅ TRACE: Results loaded successfully, forcing visibility');
                 
-                if (downloadSingleBtn) {
-                    console.log('✅ TRACE: Single download button visibility:', downloadSingleBtn.offsetHeight > 0);
-                    console.log('✅ TRACE: Single download button disabled:', downloadSingleBtn.disabled);
-                }
+                // PHASE 3: FORCE RESULTS VISIBILITY with multiple approaches
+                this.forceShowResults();
                 
                 console.log('✅ TRACE: onCrawlingComplete() - FUNCTION EXIT');
+            }
+
+            forceShowResults() {
+                console.log('🎯 FORCE: forceShowResults() - ENTRY');
+                const resultsContainer = document.getElementById('results-container');
+                
+                if (!resultsContainer) {
+                    console.error('🎯 ERROR: Results container not found in DOM');
+                    return;
+                }
+                
+                // Multiple approaches to ensure visibility
+                resultsContainer.classList.remove('hidden');
+                resultsContainer.style.display = 'block';
+                resultsContainer.style.visibility = 'visible';
+                resultsContainer.style.opacity = '1';
+                
+                console.log('🎯 FORCE: Results container visibility set via multiple methods');
+                console.log('🎯 FORCE: Container computed display:', getComputedStyle(resultsContainer).display);
+                console.log('🎯 FORCE: Container visible height:', resultsContainer.offsetHeight);
+                
+                // Verify and force button visibility
+                const downloadBtn = document.getElementById('download-btn');
+                const downloadSingleBtn = document.getElementById('download-single-btn');
+                
+                if (downloadBtn) {
+                    downloadBtn.style.display = 'inline-block';
+                    console.log('🎯 FORCE: ZIP download button forced visible');
+                }
+                
+                if (downloadSingleBtn) {
+                    downloadSingleBtn.style.display = 'inline-block';
+                    console.log('🎯 FORCE: Single download button forced visible');
+                    console.log('🎯 FORCE: Single button final visibility check:', downloadSingleBtn.offsetHeight > 0);
+                } else {
+                    console.error('🎯 ERROR: Single download button not found');
+                }
+                
+                // Scroll to results with slight delay for DOM update
+                setTimeout(() => {
+                    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                    console.log('🎯 FORCE: Scrolled to results container');
+                }, 100);
+                
+                console.log('🎯 FORCE: forceShowResults() - EXIT');
             }
 
             onCrawlingFinished() {
@@ -670,33 +753,54 @@
             }
 
             displayResults(results) {
-                console.log('📊 TRACE: displayResults() - FUNCTION ENTRY');
-                console.log('📊 TRACE: Results object:', results);
-                console.log('📊 TRACE: Results total_pages:', results.total_pages);
-                console.log('📊 TRACE: Results content keys:', Object.keys(results.content || {}));
-                console.log('📊 TRACE: Results errors:', results.errors);
+                console.log('📊 DIAGNOSTIC: displayResults() - FUNCTION ENTRY');
+                console.log('📊 DIAGNOSTIC: Results object:', results);
+                console.log('📊 DIAGNOSTIC: Results total_pages:', results.total_pages);
+                console.log('📊 DIAGNOSTIC: Results content keys:', Object.keys(results.content || {}));
+                console.log('📊 DIAGNOSTIC: Results errors:', results.errors);
                 
                 document.getElementById('total-pages').textContent = results.total_pages || 0;
                 document.getElementById('successful-pages').textContent = Object.keys(results.content || {}).length;
                 document.getElementById('error-count').textContent = (results.errors || []).length;
                 
-                console.log('📊 TRACE: Setting results container to block display');
+                console.log('📊 DIAGNOSTIC: About to modify results container display');
                 const resultsContainer = document.getElementById('results-container');
-                resultsContainer.style.display = 'block';
-                console.log('📊 TRACE: Results container display set to:', resultsContainer.style.display);
+                console.log('📊 DIAGNOSTIC: Results container found:', !!resultsContainer);
+                console.log('📊 DIAGNOSTIC: Results container current display:', getComputedStyle(resultsContainer).display);
+                console.log('📊 DIAGNOSTIC: Results container current visibility:', getComputedStyle(resultsContainer).visibility);
+                console.log('📊 DIAGNOSTIC: Results container current opacity:', getComputedStyle(resultsContainer).opacity);
                 
-                console.log('📊 TRACE: Scrolling to results container');
-                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                resultsContainer.classList.remove('hidden');
+                console.log('📊 DIAGNOSTIC: Results container hidden class removed');
+                console.log('📊 DIAGNOSTIC: Results container display AFTER removing hidden:', getComputedStyle(resultsContainer).display);
+                console.log('📊 DIAGNOSTIC: Results container classes:', resultsContainer.className);
                 
-                // Check button visibility after display change
+                // Check all download buttons
+                const downloadBtn = document.getElementById('download-btn');
                 const downloadSingleBtn = document.getElementById('download-single-btn');
-                if (downloadSingleBtn) {
-                    console.log('📊 TRACE: Single download button after display change - visible:', downloadSingleBtn.offsetHeight > 0);
-                } else {
-                    console.error('📊 ERROR: Single download button not found after results display');
+                
+                console.log('📊 DIAGNOSTIC: Download ZIP button exists:', !!downloadBtn);
+                console.log('📊 DIAGNOSTIC: Download Single button exists:', !!downloadSingleBtn);
+                
+                if (downloadBtn) {
+                    console.log('📊 DIAGNOSTIC: ZIP button - offsetHeight:', downloadBtn.offsetHeight);
+                    console.log('📊 DIAGNOSTIC: ZIP button - offsetWidth:', downloadBtn.offsetWidth);
+                    console.log('📊 DIAGNOSTIC: ZIP button - computed display:', getComputedStyle(downloadBtn).display);
                 }
                 
-                console.log('📊 TRACE: displayResults() - FUNCTION EXIT');
+                if (downloadSingleBtn) {
+                    console.log('📊 DIAGNOSTIC: Single button - offsetHeight:', downloadSingleBtn.offsetHeight);
+                    console.log('📊 DIAGNOSTIC: Single button - offsetWidth:', downloadSingleBtn.offsetWidth);
+                    console.log('📊 DIAGNOSTIC: Single button - computed display:', getComputedStyle(downloadSingleBtn).display);
+                    console.log('📊 DIAGNOSTIC: Single button - computed visibility:', getComputedStyle(downloadSingleBtn).visibility);
+                } else {
+                    console.error('📊 DIAGNOSTIC ERROR: Single download button not found in DOM');
+                }
+                
+                console.log('📊 DIAGNOSTIC: Scrolling to results container');
+                resultsContainer.scrollIntoView({ behavior: 'smooth' });
+                
+                console.log('📊 DIAGNOSTIC: displayResults() - FUNCTION EXIT');
             }
 
             async downloadResults() {
@@ -808,14 +912,31 @@
             }
 
             async loadSessions() {
+                console.log('🔄 DIAGNOSTIC: loadSessions() - ENTRY');
                 try {
                     const response = await fetch('/api/sessions');
                     const data = await response.json();
+                    console.log('🔄 DIAGNOSTIC: Sessions data received:', data);
                     
-                    this.displaySessions(data.sessions || {});
+                    // PHASE 4: SESSION RECOVERY - Auto-recover completed sessions
+                    const sessions = data.sessions || {};
+                    for (const [sessionId, session] of Object.entries(sessions)) {
+                        console.log(`🔄 DIAGNOSTIC: Session ${sessionId} status: ${session.status}`);
+                        if (session.status === 'completed' && !this.currentSessionId) {
+                            console.log(`🔄 AUTO-RECOVERY: Found completed session ${sessionId}, auto-loading results`);
+                            this.currentSessionId = sessionId;
+                            document.getElementById('session-id').textContent = this.currentSessionId;
+                            console.log('🔄 AUTO-RECOVERY: Triggering completion flow for existing session');
+                            await this.onCrawlingComplete();
+                            break; // Only load first completed session
+                        }
+                    }
+                    
+                    this.displaySessions(sessions);
                 } catch (error) {
-                    console.error('Error loading sessions:', error);
+                    console.error('🔄 DIAGNOSTIC ERROR: Error loading sessions:', error);
                 }
+                console.log('🔄 DIAGNOSTIC: loadSessions() - EXIT');
             }
 
             displaySessions(sessions) {
