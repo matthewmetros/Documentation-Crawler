@@ -17,7 +17,7 @@ import queue
 import zipfile
 import io
 
-from flask import Flask, render_template, request, jsonify, send_file, session
+from flask import Flask, render_template, request, jsonify, send_file, session, Response
 from flask_socketio import SocketIO, emit, join_room, leave_room
 import uuid
 
@@ -415,20 +415,19 @@ def download_single_document(session_id):
     try:
         logger.info(f"📄 Generating single document for session: {session_id}")
         
-        # Get crawling results from active sessions or completed sessions
-        session_data = active_sessions.get(session_id)
-        if not session_data:
-            return jsonify({'error': 'Session not found'}), 404
+        # Use the exact same working pattern as ZIP download
+        with session_lock:
+            if session_id not in active_sessions:
+                return jsonify({'error': 'Session not found'}), 404
+                
+            crawler_interface = active_sessions[session_id]['crawler']
+            config_data = active_sessions[session_id].get('config', {})
             
-        crawler = session_data['crawler']
-        if crawler.status != 'completed':
-            return jsonify({'error': 'Crawling not completed yet'}), 400
+            # Get results exactly like ZIP download does
+            results = crawler_interface.get_results()
+            logger.info(f"📄 TRACE: Results from get_results(): {type(results)}")
+            logger.info(f"📦 TRACE: Results retrieved, {len(results.get('content', {}))} pages found")
             
-        results = {
-            'content': crawler.results,
-            'total_pages': crawler.total_pages,
-            'errors': getattr(crawler, 'errors', [])
-        }
         if not results:
             return jsonify({'error': 'Session not found or no results available'}), 404
             
@@ -441,12 +440,12 @@ def download_single_document(session_id):
         # Header
         consolidated_content.append("# Complete Documentation\n\n")
         consolidated_content.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-        consolidated_content.append(f"**Total Pages:** {results['total_pages']}\n")
+        consolidated_content.append(f"**Total Pages:** {results.get('total_pages', len(results.get('content', {})))}\n")
         consolidated_content.append(f"**Session ID:** {session_id}\n\n")
         
         # Table of Contents
         consolidated_content.append("## Table of Contents\n\n")
-        for i, (url, content_data) in enumerate(results['content'].items(), 1):
+        for i, (url, content_data) in enumerate(results.get('content', {}).items(), 1):
             title = content_data.get('title', url.split('/')[-1])
             # Clean title for TOC
             clean_title = title.replace('#', '').strip()
@@ -455,13 +454,23 @@ def download_single_document(session_id):
         consolidated_content.append("\n---\n\n")
         
         # Add all content with proper formatting
-        for i, (url, content_data) in enumerate(results['content'].items(), 1):
+        for i, (url, content_data) in enumerate(results.get('content', {}).items(), 1):
             title = content_data.get('title', url.split('/')[-1])
             clean_title = title.replace('#', '').strip()
             
-            # Get content in text format (preferred for consolidation)
-            content_dict = content_data.get('content', {})
-            content = content_dict.get('text', content_dict.get('markdown', content_dict.get('html', '')))
+            # Get content - handle both old and new data structures
+            if 'formats' in content_data:
+                # New multi-format structure
+                formats_data = content_data.get('formats', {})
+                content = formats_data.get('markdown', formats_data.get('text', formats_data.get('html', '')))
+            else:
+                # Legacy single format structure
+                content_dict = content_data.get('content', {})
+                if isinstance(content_dict, dict):
+                    content = content_dict.get('text', content_dict.get('markdown', content_dict.get('html', '')))
+                else:
+                    # content_dict is already a string
+                    content = str(content_dict)
             
             consolidated_content.append(f"## {i}. {clean_title}\n\n")
             consolidated_content.append(f"**Source:** {url}\n\n")
@@ -488,9 +497,9 @@ def download_single_document(session_id):
         
         return Response(
             final_content,
-            mimetype='text/plain',
+            mimetype='text/markdown',
             headers={
-                'Content-Disposition': f'attachment; filename={filename}'
+                'Content-Disposition': f'attachment; filename="{filename}"'
             }
         )
         
