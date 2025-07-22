@@ -93,42 +93,65 @@ class DocCrawler:
 
     def process_sitemap_url(self, url: str) -> List[Tuple[str, str]]:
         """Process a single sitemap URL."""
+        logger.debug(f"🔄 Processing sitemap URL: {url}")
+        
         try:
             if url.endswith('.xml'):
+                logger.debug(f"📄 Processing as XML sitemap: {url}")
                 response = self.make_request(url)
                 root = ET.fromstring(response.content)
                 namespaces = {'ns': 'http://www.sitemaps.org/schemas/sitemap/0.9'}
                 urls = root.findall('.//ns:loc', namespaces)
+                logger.debug(f"🔍 Found {len(urls)} URLs in XML sitemap")
 
                 results = []
-                for loc in urls:
+                for i, loc in enumerate(urls):
                     page_url = loc.text
+                    logger.debug(f"  {i+1}. Checking URL: {page_url}")
+                    
                     self.display.update_stats(
                         processed=1,
-                        current_url=url
+                        current_url=page_url
                     )
 
-                    if not page_url.endswith('.xml') and self.url_processor.is_relevant_url(page_url, self.config.language):
-                        self.display.update_stats(relevant=1)
-                        title = self.get_page_title(page_url)
-                        results.append((page_url, title))
+                    if not page_url.endswith('.xml'):
+                        is_relevant = self.url_processor.is_relevant_url(page_url, self.config.language)
+                        logger.debug(f"    Relevance check: {is_relevant}")
+                        
+                        if is_relevant:
+                            self.display.update_stats(relevant=1)
+                            title = self.get_page_title(page_url)
+                            results.append((page_url, title))
+                            logger.debug(f"    ✅ Added to results: {title}")
+                        else:
+                            logger.debug(f"    ❌ Filtered out (not relevant)")
+                    else:
+                        logger.debug(f"    ⏭️ Skipped (XML file)")
 
+                logger.debug(f"📊 XML processing complete: {len(results)} relevant URLs found")
                 return results
 
-            elif self.url_processor.is_relevant_url(url, self.config.language):
-                self.display.update_stats(
-                    processed=1,
-                    relevant=1,
-                    current_url=url
-                )
-                return [(url, self.get_page_title(url))]
-
-            self.display.update_stats(processed=1)
-            return []
+            else:
+                logger.debug(f"📄 Processing as regular URL: {url}")
+                if self.url_processor.is_relevant_url(url, self.config.language):
+                    logger.debug(f"✅ URL is relevant, adding to results")
+                    self.display.update_stats(
+                        processed=1,
+                        relevant=1,
+                        current_url=url
+                    )
+                    title = self.get_page_title(url)
+                    return [(url, title)]
+                else:
+                    logger.debug(f"❌ URL not relevant, skipping")
+                    self.display.update_stats(processed=1)
+                    return []
 
         except Exception as e:
             self.display.update_stats(errors=1)
-            logger.error(f"Error processing URL {url}: {e}")
+            logger.error(f"💥 Error processing URL {url}: {e}")
+            import traceback
+            logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
             return []
 
     def get_page_title(self, url: str) -> str:
@@ -182,20 +205,36 @@ class DocCrawler:
 
     def parse_sitemap(self, base_urls: List[str]) -> None:
         """Parse XML sitemap and collect URLs."""
-        sitemap_url = self.url_processor.find_sitemap_url(base_urls[0]) # use first url as the base
+        logger.info(f"🚀 Starting sitemap parsing for base URLs: {base_urls}")
+        
+        base_url = base_urls[0]  # use first url as the base
+        logger.info(f"🎯 Using base URL for discovery: {base_url}")
+        
+        sitemap_url = self.url_processor.find_sitemap_url(base_url)
         if not sitemap_url:
-            logger.error("No sitemap found!")
+            logger.error("❌ No sitemap found! Cannot proceed with crawling.")
+            logger.error(f"🔧 Consider trying a different URL or checking if {base_url} has documentation")
             return
 
         try:
-            logger.info(f"Parsing main sitemap: {sitemap_url}")
+            logger.info(f"📊 Parsing main sitemap: {sitemap_url}")
             sitemap_urls = self.url_processor.parse_sitemap(sitemap_url)
-            logger.info(f"Found {len(sitemap_urls)} potential sitemaps/URLs")
+            logger.info(f"📋 Found {len(sitemap_urls)} potential sitemaps/URLs")
 
+            if len(sitemap_urls) == 0:
+                logger.warning(f"⚠️ Sitemap parsing returned 0 URLs from {sitemap_url}")
+                logger.warning(f"🔧 This might be due to XML parsing issues or empty sitemap")
+                return
+
+            logger.info(f"🔄 Starting parallel processing of {len(sitemap_urls)} URLs...")
             self.parallel_sitemap_processing(sitemap_urls)
+            
+            logger.info(f"✅ Sitemap processing complete. Found {len(self.sitemap)} relevant pages")
 
         except Exception as e:
-            logger.error(f"Error parsing sitemap: {e}")
+            logger.error(f"💥 Error during sitemap parsing: {e}")
+            import traceback
+            logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
 
     def calculate_hash(self, content: str) -> str:
         """Calculate the SHA256 hash of content."""

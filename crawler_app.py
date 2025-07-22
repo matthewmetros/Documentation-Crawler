@@ -110,10 +110,20 @@ class CrawlerWebInterface:
             self.status = "discovering"
             
             # Parse sitemap to find pages
+            logger.info(f"🔍 Starting sitemap discovery for URLs: {base_urls}")
             self.crawler.parse_sitemap(base_urls)
             
+            logger.info(f"📊 Sitemap discovery complete. Found {len(self.crawler.sitemap)} pages")
+            
             if not self.crawler.sitemap:
-                self.emit_status("No pages found in sitemap", "error")
+                error_msg = f"No pages found in sitemap for {self.config.base_url}"
+                logger.error(f"❌ {error_msg}")
+                logger.error(f"🔧 Possible causes:")
+                logger.error(f"  - Site doesn't have an XML sitemap")
+                logger.error(f"  - Sitemap is malformed or empty")
+                logger.error(f"  - URL filtering is too restrictive")
+                logger.error(f"  - Site uses dynamic/JavaScript content")
+                self.emit_status(error_msg, "error")
                 self.status = "error"
                 return
                 
