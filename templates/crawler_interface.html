@@ -432,7 +432,6 @@
                     this.checkSessionStatus();
                 }
                 
-                this.initializeFadeOutCSS(); // Initialize enhanced styling
                 this.initializeSocketIO();
                 this.initializeEventListeners();
                 this.loadSessions();
@@ -1164,59 +1163,25 @@
                 const entry = document.createElement('div');
                 entry.className = `log-entry ${level}`;
                 
-                // Enhanced emoji and color coding
+                // Add emoji based on level
                 let emoji = '';
-                let prefix = '';
                 switch(level) {
-                    case 'error': 
-                        emoji = '❌'; 
-                        prefix = 'ERROR: ';
-                        break;
-                    case 'warning': 
-                        emoji = '⚠️'; 
-                        prefix = 'WARNING: ';
-                        break;
-                    case 'success': 
-                        emoji = '✅'; 
-                        prefix = 'SUCCESS: ';
-                        break;
-                    case 'info': 
-                        emoji = 'ℹ️'; 
-                        prefix = 'INFO: ';
-                        break;
-                    case 'debug':
-                        emoji = '🔍';
-                        prefix = 'DEBUG: ';
-                        break;
-                    default: 
-                        emoji = '📝';
+                    case 'error': emoji = '❌'; break;
+                    case 'warning': emoji = '⚠️'; break;
+                    case 'success': emoji = '✅'; break;
+                    case 'info': emoji = 'ℹ️'; break;
+                    default: emoji = '📝';
                 }
                 
-                // Add copy button for errors
-                const copyButton = level === 'error' ? 
-                    `<button class="btn btn-sm btn-outline-light float-end" onclick="navigator.clipboard.writeText('${this.escapeHtml(message)}')">
-                        <i data-feather="copy"></i>
-                    </button>` : '';
-                
-                entry.innerHTML = `
-                    <div class="d-flex justify-content-between align-items-start">
-                        <span>[${timestamp}] ${emoji} ${prefix}${this.escapeHtml(message)}</span>
-                        ${copyButton}
-                    </div>
-                `;
+                entry.innerHTML = `[${timestamp}] ${emoji} ${this.escapeHtml(message)}`;
                 
                 container.appendChild(entry);
                 container.scrollTop = container.scrollHeight;
                 
-                // Enhanced alert system with auto-categorization
-                if (level === 'error') {
-                    this.showEnhancedAlert(message, 'danger', true);
-                } else if (level === 'warning') {
-                    this.showEnhancedAlert(message, 'warning', false);
+                // Also show important messages as alerts
+                if (level === 'error' || level === 'warning') {
+                    this.showAlert(message, level === 'error' ? 'danger' : 'warning');
                 }
-                
-                // Update feather icons
-                feather.replace();
             }
             
             escapeHtml(text) {
@@ -1225,105 +1190,24 @@
                 return div.innerHTML;
             }
             
-            showEnhancedAlert(message, type = 'info', persistent = false) {
+            showAlert(message, type = 'info') {
                 const alertsContainer = document.getElementById('alerts-container') || this.createAlertsContainer();
                 
-                // Check for duplicate alerts
-                const existingAlerts = alertsContainer.querySelectorAll('.alert');
-                for (const alert of existingAlerts) {
-                    if (alert.textContent.includes(message)) {
-                        return; // Don't show duplicate
-                    }
-                }
-                
                 const alert = document.createElement('div');
-                alert.className = `alert alert-${type} alert-dismissible fade show shadow-sm`;
-                
-                // Add icons based on type
-                const icons = {
-                    'danger': '<i data-feather="alert-circle"></i>',
-                    'warning': '<i data-feather="alert-triangle"></i>',
-                    'success': '<i data-feather="check-circle"></i>',
-                    'info': '<i data-feather="info"></i>'
-                };
-                
-                // Add suggested actions for common errors
-                let suggestedAction = '';
-                if (message.includes('timeout')) {
-                    suggestedAction = '<br><small>Try reducing the crawl depth or increasing timeout in advanced settings.</small>';
-                } else if (message.includes('No pages found')) {
-                    suggestedAction = '<br><small>Check if the URL is correct and the site has a sitemap or documentation structure.</small>';
-                } else if (message.includes('Network')) {
-                    suggestedAction = '<br><small>Check your internet connection and try again.</small>';
-                }
-                
+                alert.className = `alert alert-${type} alert-dismissible fade show`;
                 alert.innerHTML = `
-                    ${icons[type] || ''} ${this.escapeHtml(message)}${suggestedAction}
+                    ${this.escapeHtml(message)}
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 `;
                 
                 alertsContainer.appendChild(alert);
-                feather.replace();
                 
-                // Auto-dismiss non-persistent alerts
-                if (!persistent) {
-                    setTimeout(() => {
-                        if (alert.parentNode) {
-                            alert.classList.add('fade-out');
-                            setTimeout(() => alert.remove(), 300);
-                        }
-                    }, type === 'success' ? 3000 : 8000);
-                }
-            }
-            
-            // Legacy method for backward compatibility
-            showAlert(message, type = 'info') {
-                this.showEnhancedAlert(message, type, false);
-            }
-            
-            // Add CSS for fade-out animation
-            initializeFadeOutCSS() {
-                if (!document.getElementById('fade-out-css')) {
-                    const style = document.createElement('style');
-                    style.id = 'fade-out-css';
-                    style.textContent = `
-                        .fade-out {
-                            opacity: 0;
-                            transition: opacity 0.3s ease-out;
-                        }
-                        
-                        .log-entry.error {
-                            background-color: rgba(220, 53, 69, 0.1);
-                            border-left: 4px solid #dc3545;
-                            padding: 8px 12px;
-                            margin: 4px 0;
-                        }
-                        
-                        .log-entry.warning {
-                            background-color: rgba(255, 193, 7, 0.1);
-                            border-left: 4px solid #ffc107;
-                            padding: 8px 12px;
-                            margin: 4px 0;
-                        }
-                        
-                        .log-entry.success {
-                            background-color: rgba(25, 135, 84, 0.1);
-                            border-left: 4px solid #198754;
-                            padding: 8px 12px;
-                            margin: 4px 0;
-                        }
-                        
-                        .log-entry.debug {
-                            background-color: rgba(108, 117, 125, 0.1);
-                            border-left: 4px solid #6c757d;
-                            padding: 8px 12px;
-                            margin: 4px 0;
-                            font-family: monospace;
-                            font-size: 0.9em;
-                        }
-                    `;
-                    document.head.appendChild(style);
-                }
+                // Auto-dismiss after 10 seconds
+                setTimeout(() => {
+                    if (alert.parentNode) {
+                        alert.remove();
+                    }
+                }, 10000);
             }
             
             createAlertsContainer() {
