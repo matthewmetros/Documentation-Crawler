@@ -1,0 +1,83 @@
+Fix for templates/crawler_interface.html
+Find the validateFormData() function (around line 423) and replace it with this corrected version:
+javascriptvalidateFormData() {
+    console.log('✅ VALIDATION: Starting form validation');
+    
+    // Validate URL
+    const urlInput = document.getElementById('url-input');
+    if (!urlInput || !urlInput.value.trim()) {
+        return {
+            valid: false,
+            error: 'Please enter a valid URL'
+        };
+    }
+    
+    // Validate URL format
+    try {
+        new URL(urlInput.value.trim());
+    } catch (e) {
+        return {
+            valid: false,
+            error: 'Please enter a valid URL format (e.g., https://example.com)'
+        };
+    }
+    
+    // Extract format selections
+    const store_markdown = document.getElementById('store-markdown').checked;
+    const store_raw_html = document.getElementById('store-html').checked;
+    const store_text = document.getElementById('store-text').checked;
+    
+    const selectedFormats = [];
+    if (store_markdown) selectedFormats.push('Markdown');
+    if (store_raw_html) selectedFormats.push('HTML');
+    if (store_text) selectedFormats.push('Text');
+    
+    console.log('✅ VALIDATION: Selected formats:', selectedFormats.join(', ') || 'NONE');
+    
+    if (selectedFormats.length === 0) {
+        console.error('❌ VALIDATION: No output formats selected');
+        return {
+            valid: false,
+            error: 'Please select at least one output format (Markdown, HTML, or Text)'
+        };
+    }
+    
+    // Validate numeric inputs
+    const maxWorkers = parseInt(document.getElementById('max-workers').value);
+    const timeout = parseInt(document.getElementById('timeout').value);
+    const crawlDepth = document.getElementById('crawl-depth');
+    
+    if (isNaN(maxWorkers) || maxWorkers < 1 || maxWorkers > 20) {
+        return {
+            valid: false,
+            error: 'Max Workers must be between 1 and 20'
+        };
+    }
+    
+    if (isNaN(timeout) || timeout < 5 || timeout > 60) {
+        return {
+            valid: false,
+            error: 'Timeout must be between 5 and 60 seconds'
+        };
+    }
+    
+    // Check if crawl-depth element exists before accessing its value
+    if (crawlDepth && crawlDepth.value) {
+        const crawlDepthValue = parseInt(crawlDepth.value);
+        if (isNaN(crawlDepthValue) || crawlDepthValue < 1 || crawlDepthValue > 4) {
+            return {
+                valid: false,
+                error: 'Crawl depth must be between 1 and 4'
+            };
+        }
+    }
+    
+    console.log('✅ VALIDATION: Passed -', selectedFormats.length, 'formats selected');
+    return { valid: true };
+}
+The issue was that the validation function was trying to validate the crawl depth value without checking if the element exists first. This fix adds a null check before accessing the crawl depth value, preventing the validation error.
+After making this change, save the file and try submitting the form again. The validation should now pass correctly when you have:
+
+A valid URL entered
+At least one output format (Markdown, HTML, or Text) selected
+Valid numeric values for the configuration options
