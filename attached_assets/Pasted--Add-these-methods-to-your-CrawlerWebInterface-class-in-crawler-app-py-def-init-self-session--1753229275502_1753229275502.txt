@@ -1,0 +1,120 @@
+# Add these methods to your CrawlerWebInterface class in crawler_app.py
+
+def __init__(self, session_id: str, socketio_instance):
+    # ... existing init code ...
+    self.is_paused = False
+    self.pause_event = threading.Event()
+    self.pause_event.set()  # Initially not paused
+
+def pause_crawling(self):
+    """Pause the crawling process."""
+    self.is_paused = True
+    self.pause_event.clear()
+    self.emit_status("Crawling paused", "warning")
+    logger.info(f"Session {self.session_id} paused")
+
+def resume_crawling(self):
+    """Resume the crawling process."""
+    self.is_paused = False
+    self.pause_event.set()
+    self.emit_status("Crawling resumed", "info")
+    logger.info(f"Session {self.session_id} resumed")
+
+def crawl_with_progress(self, selected_urls: List[str], config_data: Dict):
+    """Modified crawl_with_progress to support pause/resume."""
+    logger.info("🔧 TRACE: crawl_with_progress() - Entry point")
+    logger.info(f"🔧 TRACE: Received config_data: {config_data}")
+    
+    store_markdown = config_data.get('store_markdown', True)
+    store_raw_html = config_data.get('store_raw_html', False)
+    store_text = config_data.get('store_text', False)
+    store_flatten = config_data.get('store_flatten', False)
+    max_crawl_depth = config_data.get('max_crawl_depth', 2)
+    
+    formats = {
+        'store_markdown': store_markdown,
+        'store_raw_html': store_raw_html,
+        'store_text': store_text
+    }
+    
+    total_urls = len(selected_urls)
+    processed = 0
+    
+    self.emit_progress(0, total_urls)
+    
+    for url in selected_urls:
+        # Check for pause
+        self.pause_event.wait()  # Will block here if paused
+        
+        if self.stop_requested:
+            self.emit_status("Crawling stopped by user", "warning")
+            self.status = "stopped"
+            return
+            
+        try:
+            # Check pause again before processing
+            if self.is_paused:
+                self.emit_status(f"Paused at {processed}/{total_urls} pages", "warning")
+                self.pause_event.wait()
+            
+            # Get page content in multiple formats
+            content_formats = self.crawler._scrape_single_page(url, formats)
+            if content_formats:
+                primary_content = content_formats.get('markdown', '')
+                if not primary_content and content_formats:
+                    primary_content = list(content_formats.values())[0]
+                
+                self.scraped_content[url] = {
+                    'content': primary_content,
+                    'formats': content_formats,
+                    'title': self.crawler.sitemap.get(url, url),
+                    'timestamp': datetime.now().isoformat()
+                }
+                logger.debug(f"✅ Stored content for {url} in {len(content_formats)} formats")
+                
+            processed += 1
+            self.emit_progress(processed, total_urls)
+            self.emit_status(f"Processed: {url}")
+            
+        except Exception as e:
+            self.error_log.append(f"Failed to process {url}: {str(e)}")
+            self.emit_status(f"Error processing {url}: {str(e)}", "warning")
+            processed += 1
+            self.emit_progress(processed, total_urls)
+    
+    self.status = "completed"
+    self.emit_status(f"Crawling completed! Successfully processed {len(self.scraped_content)} pages")
+
+# Add these API endpoints in crawler_app.py
+
+@app.route('/api/pause-crawling/<session_id>', methods=['POST'])
+def pause_crawling(session_id):
+    """Pause a crawling session."""
+    try:
+        with session_lock:
+            if session_id in active_sessions:
+                crawler_interface = active_sessions[session_id]['crawler']
+                crawler_interface.pause_crawling()
+                return jsonify({'success': True, 'message': 'Crawling paused'})
+            else:
+                return jsonify({'success': False, 'error': 'Session not found'}), 404
+                
+    except Exception as e:
+        logger.error(f"Error pausing crawling: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/resume-crawling/<session_id>', methods=['POST'])
+def resume_crawling(session_id):
+    """Resume a paused crawling session."""
+    try:
+        with session_lock:
+            if session_id in active_sessions:
+                crawler_interface = active_sessions[session_id]['crawler']
+                crawler_interface.resume_crawling()
+                return jsonify({'success': True, 'message': 'Crawling resumed'})
+            else:
+                return jsonify({'success': False, 'error': 'Session not found'}), 404
+                
+    except Exception as e:
+        logger.error(f"Error resuming crawling: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
