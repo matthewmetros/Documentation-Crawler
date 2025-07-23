@@ -1,0 +1,209 @@
+<!-- Add this configuration presets section in the advanced options area -->
+<!-- Place it right after the language select div -->
+
+<div class="row mt-3">
+    <div class="col-md-12">
+        <div class="alert alert-info alert-dismissible fade show" role="alert">
+            <h6 class="alert-heading"><i data-feather="zap"></i> Quick Configuration Presets</h6>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-primary preset-btn" data-preset="quick">
+                    <i data-feather="zap"></i> Quick Scan
+                </button>
+                <button type="button" class="btn btn-outline-primary preset-btn" data-preset="thorough">
+                    <i data-feather="search"></i> Thorough
+                </button>
+                <button type="button" class="btn btn-outline-primary preset-btn" data-preset="gentle">
+                    <i data-feather="heart"></i> Gentle
+                </button>
+                <button type="button" class="btn btn-outline-primary preset-btn" data-preset="aggressive">
+                    <i data-feather="lightning"></i> Aggressive
+                </button>
+                <button type="button" class="btn btn-outline-primary preset-btn" data-preset="custom">
+                    <i data-feather="settings"></i> Custom
+                </button>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    </div>
+</div>
+
+<!-- Add preset management modal -->
+<div class="modal fade" id="presetModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Save Configuration Preset</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="preset-name" class="form-label">Preset Name</label>
+                    <input type="text" class="form-control" id="preset-name" placeholder="My Custom Configuration">
+                </div>
+                <div class="mb-3">
+                    <label for="preset-description" class="form-label">Description</label>
+                    <textarea class="form-control" id="preset-description" rows="2" placeholder="Description of when to use this preset"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="save-preset-btn">Save Preset</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add this to your CrawlerInterface initialization
+initializePresets() {
+    this.presets = {
+        quick: {
+            name: 'Quick Scan',
+            description: 'Fast surface-level scan',
+            config: {
+                maxWorkers: 10,
+                timeout: 5,
+                maxRetries: 1,
+                chunkSize: 5,
+                crawlDepth: 1
+            }
+        },
+        thorough: {
+            name: 'Thorough',
+            description: 'Comprehensive documentation crawl',
+            config: {
+                maxWorkers: 5,
+                timeout: 15,
+                maxRetries: 3,
+                chunkSize: 3,
+                crawlDepth: 3
+            }
+        },
+        gentle: {
+            name: 'Gentle',
+            description: 'Respectful crawling for sensitive sites',
+            config: {
+                maxWorkers: 2,
+                timeout: 20,
+                maxRetries: 5,
+                chunkSize: 1,
+                crawlDepth: 2
+            }
+        },
+        aggressive: {
+            name: 'Aggressive',
+            description: 'Maximum speed for robust sites',
+            config: {
+                maxWorkers: 20,
+                timeout: 5,
+                maxRetries: 1,
+                chunkSize: 10,
+                crawlDepth: 4
+            }
+        }
+    };
+    
+    // Load custom presets from localStorage
+    const savedPresets = localStorage.getItem('crawlerPresets');
+    if (savedPresets) {
+        const customPresets = JSON.parse(savedPresets);
+        Object.assign(this.presets, customPresets);
+    }
+    
+    // Add event listeners
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const presetName = e.currentTarget.dataset.preset;
+            if (presetName === 'custom') {
+                this.showPresetModal();
+            } else {
+                this.applyPreset(presetName);
+            }
+        });
+    });
+    
+    document.getElementById('save-preset-btn').addEventListener('click', () => {
+        this.saveCustomPreset();
+    });
+}
+
+applyPreset(presetName) {
+    const preset = this.presets[presetName];
+    if (!preset) return;
+    
+    // Apply configuration
+    document.getElementById('max-workers').value = preset.config.maxWorkers;
+    document.getElementById('timeout').value = preset.config.timeout;
+    document.getElementById('max-retries').value = preset.config.maxRetries;
+    document.getElementById('chunk-size').value = preset.config.chunkSize;
+    document.getElementById('crawl-depth').value = preset.config.crawlDepth;
+    
+    // Show notification
+    this.addLogEntry(`Applied preset: ${preset.name} - ${preset.description}`, 'info');
+    
+    // Highlight selected preset
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-preset="${presetName}"]`).classList.add('active');
+}
+
+showPresetModal() {
+    const modal = new bootstrap.Modal(document.getElementById('presetModal'));
+    modal.show();
+}
+
+saveCustomPreset() {
+    const name = document.getElementById('preset-name').value;
+    const description = document.getElementById('preset-description').value;
+    
+    if (!name) {
+        alert('Please enter a preset name');
+        return;
+    }
+    
+    // Get current configuration
+    const config = {
+        maxWorkers: parseInt(document.getElementById('max-workers').value),
+        timeout: parseInt(document.getElementById('timeout').value),
+        maxRetries: parseInt(document.getElementById('max-retries').value),
+        chunkSize: parseInt(document.getElementById('chunk-size').value),
+        crawlDepth: parseInt(document.getElementById('crawl-depth').value)
+    };
+    
+    // Generate unique ID
+    const presetId = `custom_${Date.now()}`;
+    
+    // Save preset
+    this.presets[presetId] = {
+        name,
+        description,
+        config,
+        custom: true
+    };
+    
+    // Save to localStorage
+    const customPresets = {};
+    Object.entries(this.presets).forEach(([key, preset]) => {
+        if (preset.custom) {
+            customPresets[key] = preset;
+        }
+    });
+    localStorage.setItem('crawlerPresets', JSON.stringify(customPresets));
+    
+    // Close modal
+    bootstrap.Modal.getInstance(document.getElementById('presetModal')).hide();
+    
+    // Show success message
+    this.addLogEntry(`Saved custom preset: ${name}`, 'success');
+    
+    // Refresh preset buttons
+    this.refreshPresetButtons();
+}
+
+// Call this in constructor
+constructor() {
+    // ... existing code ...
+    this.initializePresets();
+}
+</script>

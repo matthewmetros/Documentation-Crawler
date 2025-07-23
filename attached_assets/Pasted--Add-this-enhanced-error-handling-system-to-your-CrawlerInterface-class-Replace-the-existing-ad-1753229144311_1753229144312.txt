@@ -1,0 +1,125 @@
+// Add this enhanced error handling system to your CrawlerInterface class
+// Replace the existing addLogEntry and showAlert methods with these enhanced versions
+
+addLogEntry(message, level = 'info') {
+    const container = document.getElementById('log-container');
+    const timestamp = new Date().toLocaleTimeString();
+    
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${level}`;
+    
+    // Enhanced emoji and color coding
+    let emoji = '';
+    let prefix = '';
+    switch(level) {
+        case 'error': 
+            emoji = '❌'; 
+            prefix = 'ERROR: ';
+            break;
+        case 'warning': 
+            emoji = '⚠️'; 
+            prefix = 'WARNING: ';
+            break;
+        case 'success': 
+            emoji = '✅'; 
+            prefix = 'SUCCESS: ';
+            break;
+        case 'info': 
+            emoji = 'ℹ️'; 
+            prefix = 'INFO: ';
+            break;
+        case 'debug':
+            emoji = '🔍';
+            prefix = 'DEBUG: ';
+            break;
+        default: 
+            emoji = '📝';
+    }
+    
+    // Add copy button for errors
+    const copyButton = level === 'error' ? 
+        `<button class="btn btn-sm btn-outline-light float-end" onclick="navigator.clipboard.writeText('${this.escapeHtml(message)}')">
+            <i data-feather="copy"></i>
+        </button>` : '';
+    
+    entry.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+            <span>[${timestamp}] ${emoji} ${prefix}${this.escapeHtml(message)}</span>
+            ${copyButton}
+        </div>
+    `;
+    
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+    
+    // Enhanced alert system with auto-categorization
+    if (level === 'error') {
+        this.showEnhancedAlert(message, 'danger', true);
+    } else if (level === 'warning') {
+        this.showEnhancedAlert(message, 'warning', false);
+    }
+    
+    // Update feather icons
+    feather.replace();
+}
+
+showEnhancedAlert(message, type = 'info', persistent = false) {
+    const alertsContainer = document.getElementById('alerts-container') || this.createAlertsContainer();
+    
+    // Check for duplicate alerts
+    const existingAlerts = alertsContainer.querySelectorAll('.alert');
+    for (const alert of existingAlerts) {
+        if (alert.textContent.includes(message)) {
+            return; // Don't show duplicate
+        }
+    }
+    
+    const alert = document.createElement('div');
+    alert.className = `alert alert-${type} alert-dismissible fade show shadow-sm`;
+    
+    // Add icons based on type
+    const icons = {
+        'danger': '<i data-feather="alert-circle"></i>',
+        'warning': '<i data-feather="alert-triangle"></i>',
+        'success': '<i data-feather="check-circle"></i>',
+        'info': '<i data-feather="info"></i>'
+    };
+    
+    // Add suggested actions for common errors
+    let suggestedAction = '';
+    if (message.includes('timeout')) {
+        suggestedAction = '<br><small>Try reducing the crawl depth or increasing timeout in advanced settings.</small>';
+    } else if (message.includes('No pages found')) {
+        suggestedAction = '<br><small>Check if the URL is correct and the site has a sitemap or documentation structure.</small>';
+    } else if (message.includes('Network')) {
+        suggestedAction = '<br><small>Check your internet connection and try again.</small>';
+    }
+    
+    alert.innerHTML = `
+        ${icons[type] || ''} ${this.escapeHtml(message)}${suggestedAction}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    alertsContainer.appendChild(alert);
+    feather.replace();
+    
+    // Auto-dismiss non-persistent alerts
+    if (!persistent) {
+        setTimeout(() => {
+            if (alert.parentNode) {
+                alert.classList.add('fade-out');
+                setTimeout(() => alert.remove(), 300);
+            }
+        }, type === 'success' ? 3000 : 8000);
+    }
+}
+
+// Add this CSS for fade-out animation
+const style = document.createElement('style');
+style.textContent = `
+    .fade-out {
+        opacity: 0;
+        transition: opacity 0.3s ease-out;
+    }
+`;
+document.head.appendChild(style);
