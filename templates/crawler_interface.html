@@ -550,7 +550,7 @@
                 // Validate numeric inputs
                 const maxWorkers = parseInt(document.getElementById('max-workers').value);
                 const timeout = parseInt(document.getElementById('timeout').value);
-                const crawlDepth = parseInt(document.getElementById('crawl-depth').value);
+                const crawlDepth = document.getElementById('crawl-depth');
                 
                 if (isNaN(maxWorkers) || maxWorkers < 1 || maxWorkers > 20) {
                     return {
@@ -566,15 +566,63 @@
                     };
                 }
                 
-                if (isNaN(crawlDepth) || crawlDepth < 1 || crawlDepth > 4) {
-                    return {
-                        valid: false,
-                        error: 'Crawl depth must be between 1 and 4'
-                    };
+                // Check if crawl-depth element exists before accessing its value
+                if (crawlDepth && crawlDepth.value) {
+                    const crawlDepthValue = parseInt(crawlDepth.value);
+                    if (isNaN(crawlDepthValue) || crawlDepthValue < 1 || crawlDepthValue > 4) {
+                        return {
+                            valid: false,
+                            error: 'Crawl depth must be between 1 and 4'
+                        };
+                    }
                 }
                 
                 console.log('✅ VALIDATION: Passed -', selectedFormats.length, 'formats selected');
                 return { valid: true };
+            }
+
+            getFormData() {
+                console.log('📋 DIAGNOSTIC: getFormData() - ENTRY (Enhanced Version)');
+                
+                try {
+                    // DOM element validation
+                    const urlElement = document.getElementById('url-input');
+                    const languageElement = document.getElementById('language-select');
+                    const depthElement = document.getElementById('crawl-depth');
+                    
+                    console.log('📋 DIAGNOSTIC: Validating DOM elements');
+                    if (!urlElement) throw new Error('URL input element not found');
+                    if (!languageElement) throw new Error('Language select element not found');
+                    if (!depthElement) throw new Error('Crawl depth element not found');
+                    
+                    console.log('📋 DIAGNOSTIC: Collecting form data');
+                    const formData = {
+                        url: urlElement.value,
+                        language: languageElement.value,
+                        max_workers: parseInt(document.getElementById('max-workers')?.value || 5),
+                        timeout: parseInt(document.getElementById('timeout')?.value || 10),
+                        max_retries: parseInt(document.getElementById('max-retries')?.value || 3),
+                        chunk_size: parseInt(document.getElementById('chunk-size')?.value || 3),
+                        max_crawl_depth: parseInt(depthElement.value),
+                        store_markdown: document.getElementById('store-markdown')?.checked || false,
+                        store_raw_html: document.getElementById('store-html')?.checked || false,
+                        store_text: document.getElementById('store-text')?.checked || false,
+                        debug: document.getElementById('debug-mode')?.checked || false
+                    };
+                    
+                    console.log('📋 SUCCESS: Form data collected:', formData);
+                    console.log('📋 DIAGNOSTIC: Crawl depth value:', formData.max_crawl_depth);
+                    console.log('📋 DIAGNOSTIC: Format options:');
+                    console.log('  - store_markdown:', formData.store_markdown);
+                    console.log('  - store_raw_html:', formData.store_raw_html);
+                    console.log('  - store_text:', formData.store_text);
+                    console.log('📋 DIAGNOSTIC: getFormData() - EXIT');
+                    
+                    return formData;
+                } catch (error) {
+                    console.error('📋 CRITICAL ERROR: getFormData() failed:', error);
+                    throw new Error(`Form data collection failed: ${error.message}`);
+                }
             }
 
             async startCrawling() {
